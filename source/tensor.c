@@ -20,7 +20,7 @@ static inline size_t maxindex4(float a, float b, float c, float d, size_t idxa,s
 //----------------------------------//
 
 //** Col, row, n_fmap, n_filter */
-tensor4_t *init_tensor4(size_t d0, size_t d1, size_t d2, size_t d3, init_type_t type){
+tensor4_t *init_tensor4(size_t d0, size_t d1, size_t d2, size_t d3, distribution_t type){
     assert(d0 != 0 &&
             d1 != 0 &&
             d2  != 0 &&
@@ -85,7 +85,6 @@ void print_tensor4_data(const tensor4_t *t){
     #if DEBUG
         print_tensor4_shape(t);
     #endif
-
     for(size_t i = 0; i<t->flatten_size; i++){
         if(!(i%t->strides[1])){
             printf("\n");
@@ -96,7 +95,7 @@ void print_tensor4_data(const tensor4_t *t){
         if((t->shape[2] != 1) && !(i%t->strides[2]) ){
             printf("\nFeature map : %zu\n", ((i%t->strides[3])/t->strides[2]));
         }
-        printf("%.2f\t",t->datas[i]);
+        printf("%.4f\t",t->datas[i]);
     }
     printf("\n\n");
 }
@@ -226,11 +225,11 @@ void addBias(tensor4_t *t, const float *b){
 void conv(      float *im, size_t im_cols, size_t im_rows,
                 float *kernel, size_t k_cols, size_t k_rows,
                 float *conv_result, size_t c_cols, size_t c_rows,
-                padding_type_t type)
+                padding_t type)
 {
     assert(im != NULL && kernel != NULL && "Error image or kernel is NULL");
     
-    memset(conv_result,0,c_cols*c_rows);
+    memset(conv_result, 0, c_cols*c_rows*sizeof(float));
     
     switch (type){
     
@@ -245,7 +244,7 @@ void conv(      float *im, size_t im_cols, size_t im_rows,
                 int kx = k/k_cols- k_rows/2;   //row number difference
                 int ky = k%k_cols- k_cols/2;   //col number difference
 
-                short isOutbound = ((int)(x+kx) < 0) || ((int)(y+ky) < 0) || ((int)(x+kx) >= c_rows) || ((int)(y+ky) >= c_cols); 
+                short isOutbound = ((int)(x+kx) < 0) || ((int)(y+ky) < 0) || ((int)(x+kx) >= (int)c_rows) || ((int)(y+ky) >= (int)c_cols); 
                 conv_result[i] += kernel[k]*(isOutbound ? 0.0f : im[y+ky + (x+kx)*c_cols]);
             }
             
@@ -255,7 +254,7 @@ void conv(      float *im, size_t im_cols, size_t im_rows,
 
     case VALID:
 
-
+        #pragma omp parallel for
         for(size_t i = 0; i<c_cols*c_rows;i++){
             int x = i/c_cols;   //row number
             int y = i%c_cols;   //col number
@@ -285,61 +284,82 @@ static void cumulate(float *acc, float *source, size_t cumulate_size){
 }
 
 
-tensor4_t* conv_cumulate(tensor4_t *inputfmaps, tensor4_t *kernels, padding_type_t type){
-    assert(inputfmaps != NULL && "Error during conv cumulate : NULL inputFmap");
-    assert(kernels != NULL && "Error during conv cumulate : NULL kernels");
-    assert(inputfmaps->shape[2] == kernels->shape[2] && "Error : for convolution operation, amount of input feature maps must be the same as amout of kernel for a filter\n");
 
 
-    size_t outCols = ((type == VALID) ? (inputfmaps->shape[0]- kernels->shape[0] + 1) : inputfmaps->shape[0]);
-    size_t outRows = ((type == VALID) ? (inputfmaps->shape[1]- kernels->shape[1] + 1) : inputfmaps->shape[1]);
-    size_t flat_conv_size = outCols*outRows;
-    size_t n_outputs = kernels->shape[3];       //N_filters is the number of output feature maps
+static size_t get_conv_dim(tensor4_t *X, tensor4_t *K, uint8_t axis, padding_t type){
+    assert(axis < 2 && "Error : axis must be 0 (cols) or 1 (rows)");
+    assert(K->shape[axis] <= X->shape[axis] && "Error : kernel bigger than input on this axis");
+    return  ((type == VALID) ? (X->shape[0]- K->shape[0] + 1) : X->shape[0]);
+}
 
-    //attention, allocation non free si plusieurs forwards, penser à ca
-    tensor4_t* outputfMaps = init_tensor4(outCols,outRows,n_outputs,1,NOFILL);
+tensor4_t *conv_cumulate(tensor4_t *X, tensor4_t *K, padding_t type, tensor4_t **Z)
+{
+    assert(X != NULL && "Error conv_cumulate : NULL X parameter");
+    assert(K != NULL && "Error during conv cumulate : NULL K");
+    assert(Z != NULL && "Error during conv cumulate : NULL Z");
+    
+    //Vérifier correspondance entre  X->shape[2] et K->shape[2]
 
+    size_t Z_cols = get_conv_dim(X,K,0,type);
+    size_t Z_rows = get_conv_dim(X,K,1,type);
+    size_t Z_fmaps = K->shape[3];
+
+    //
+    uint8_t needs_alloc =   (*Z) == NULL ||
+                            (*Z)->shape[0] != Z_cols || 
+                            (*Z)->shape[1] != Z_rows ||
+                            (*Z)->shape[2] != Z_fmaps;
+
+    if(needs_alloc){
+        
+        if (*Z != NULL) {free_tensor4(Z);}
+        (*Z) = (tensor4_t*)init_tensor4(Z_cols, Z_rows, Z_fmaps, 1, NOFILL);
+        LOG("Output tensor allocated, calculation starts");
+
+    } else {
+        LOG("Output tensor already alocated, calculation starts");
+    }
+
+    //Allocates conv buffers
+    size_t flat_conv_size = (*Z)->strides[2];
+    float* acc =  calloc(flat_conv_size,sizeof(float));
+    float* conv_buffer = calloc(flat_conv_size,sizeof(float));
+    
 
     //For each filter
-    
-    float* conv_buffer = calloc(flat_conv_size,sizeof(float));
-    float* acc =  calloc(flat_conv_size,sizeof(float));
-
-    for(size_t idx_filter = 0; idx_filter < kernels->shape[3]; idx_filter++){
-
+    //#pragma omp parallel for
+    for(size_t idx_filter = 0; idx_filter < K->shape[3]; idx_filter++){
+        //We reset the accumulator
         acc = memset(acc,0,sizeof(float)*flat_conv_size);
 
-        for(size_t idx_fmap = 0; idx_fmap < kernels->shape[2]; idx_fmap++){
+
+        //For each Feature map
+        for(size_t idx_fmap = 0; idx_fmap < K->shape[2]; idx_fmap++){
+            memset(conv_buffer,0,sizeof(float)*flat_conv_size);
             
-            conv_buffer = memset(conv_buffer,0,sizeof(float)*flat_conv_size);
             conv(
-                inputfmaps->datas + get_t4_idx(inputfmaps,0,0,idx_fmap,0),
-                inputfmaps->shape[0],   //Cols
-                inputfmaps->shape[1],   //Rows
+                X->datas + get_t4_idx(X,0,0,idx_fmap,0),                        //Feature map indexée par idx_fmap
+                X->shape[0],
+                X->shape[1],
+
+                K->datas + get_t4_idx(K,0,0,idx_fmap,idx_filter),        //Kernel indexé par la feature map et le numéro du filtre
+                K->shape[0],
+                K->shape[1],
                 
-                kernels->datas + get_t4_idx(kernels,0,0,idx_fmap,idx_filter),
-                kernels->shape[0],      //Cols
-                kernels->shape[1],      //Rows
-                
-                conv_buffer,
-                outCols,
-                outRows,
-                
+                conv_buffer,        
+                Z_cols,             //Peut être déduit, mais demande un calcul à nouveau
+                Z_rows, 
                 type
             );
-            
-           
-            cumulate(acc,conv_buffer, outCols*outRows);
-            
+            cumulate(acc,conv_buffer, flat_conv_size);
         }
-        memcpy(outputfMaps->datas + get_t4_idx(outputfMaps,0,0,idx_filter,0) ,acc, flat_conv_size*sizeof(float));
-          
+        memcpy((*Z)->datas+get_t4_idx((*Z),0,0,idx_filter,0), acc, flat_conv_size*sizeof(float));
     }
+
     free(conv_buffer);
     free(acc);
-
-    return outputfMaps;
 }
+
 
 /* void print_mask(const uint8_t *mask, size_t d0, size_t d1, size_t d2){
     size_t flat_size = d0*d1*d2;

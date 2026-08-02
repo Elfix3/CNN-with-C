@@ -7,6 +7,7 @@
 #include "math.h"
 #include "assert.h"
 #include "string.h"
+#include "omp.h"
 
 //My includes :
 #include "debug.h"
@@ -23,13 +24,13 @@ typedef enum{
     ZEROS,          //All values to zero
     UNIFORM,        //Uniform initalization, use this for a Kernels Tensor
     NOFILL,         //When we need to allocate only
-} init_type_t;
+} distribution_t;
 
 //Defines the padding type for convolutionnal operations
 typedef enum{
     VALID,          //Shrinks the input dimension : size_input-size_kernel + 1 becomes the new output dimension : ex : 7*7 feature map convolution witha 3*3 kernel : 7 -3 + 1 = 5*5 output dimension
     SAME,           //Preserves the input dimension
-} padding_type_t;
+} padding_t;
 
 
 //Tensor 4 used for : Kernels representation (All)
@@ -60,7 +61,7 @@ typedef struct{
 //----------------------------------//
 
 //** Col, row, n_fmap, n_filter */
-tensor4_t* init_tensor4(size_t d0, size_t d1, size_t d2, size_t d3, init_type_t type);
+tensor4_t* init_tensor4(size_t d0, size_t d1, size_t d2, size_t d3, distribution_t type);
 void free_tensor4(tensor4_t **t);
 
 //Access to a given index
@@ -85,7 +86,7 @@ void print_tensor4_mask_data(const tensor4_mask_t *t);
 void conv(      float *im, size_t im_cols, size_t im_rows,
                 float *kernel, size_t k_cols, size_t k_rows,
                 float *conv_result, size_t c_cols, size_t c_rows,
-                padding_type_t type);
+                padding_t type);
 
 void ReLU(tensor4_t *t);
 
@@ -93,12 +94,14 @@ void MaxPool(tensor4_t *t, tensor4_mask_t **m);
 
 void addBias(tensor4_t *t, const float *b);
 
-tensor4_t* conv_cumulate(tensor4_t *inputfmaps, tensor4_t *kernels, padding_type_t type);
+
+//X is the input, K the parameters, type padding type and Z the output parameter
+tensor4_t* conv_cumulate(tensor4_t *X, tensor4_t *K, padding_t type, tensor4_t **Z);
 
 /* void print_mask(const uint8_t *mask,size_t d0, size_t d1, size_t d2); */
 //static ma_methode();
 
-//Méthodes pensées pour les couches dense ..c'est plus du tensor
+//Méthodes pensées pour les couches dense ...c'est plus du tensor
 //float* SoftMax(float tab, size_t size);
 
 

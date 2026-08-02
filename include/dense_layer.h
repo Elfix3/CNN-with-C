@@ -11,7 +11,7 @@
 typedef enum{
     RELU,
     SOFTMAX
-} activation_type_t;
+} activation_t;
 
 
 typedef struct{
@@ -24,6 +24,6 @@ typedef struct{
 } DenseLayer;
 
 
-void init_dense();
+DenseLayer* init_dense(distribution_t type);    //Add some dimensions as well
 
 #endif
