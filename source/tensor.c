@@ -100,20 +100,20 @@ void print_tensor4_data(const tensor4_t *t){
     printf("\n\n");
 }
 
-void print_tensor4_mask_data(const tensor4_mask_t *t){
+void print_tensor4_mask(const uint8_t *mask, const tensor4_t *A){
     //assert(t->shape[0]);
 
-    for(size_t i = 0; i<t->flatten_size; i++){
-        if(!(i%t->strides[1])){
+    for(size_t i = 0; i<A->flatten_size; i++){
+        if(!(i%A->strides[1])){
             printf("\n");
         }
-        if((t->shape[3] != 1) && !(i%t->strides[3]) ){
-            printf("\n<--- Filter number %zu --->\n",i/t->strides[3]);
+        if((A->shape[3] != 1) && !(i%A->strides[3]) ){
+            printf("\n<--- Filter number %zu --->\n",i/A->strides[3]);
         }
-        if((t->shape[2] != 1) && !(i%t->strides[2]) ){
-            printf("\nFeature map : %zu\n", ((i%t->strides[3])/t->strides[2]));
+        if((A->shape[2] != 1) && !(i%A->strides[2]) ){
+            printf("\nFeature map : %zu\n", ((i%A->strides[3])/A->strides[2]));
         }
-        printf("%i\t",t->datas[i]);
+        printf("%u\t",mask[i]);
     }
     printf("\n\n");
 }
@@ -134,62 +134,68 @@ void ReLU(tensor4_t *t){
 
 
 
-void MaxPool(tensor4_t *t, tensor4_mask_t **m){
-    *m =  (tensor4_mask_t*)malloc(sizeof(tensor4_mask_t));
-    (*m)->datas = calloc(t->flatten_size,sizeof(uint8_t));
-    
-    for(size_t i = 0; i<4;i++){
-        (*m)->shape[i] = t->shape[i];
-        (*m)->strides[i] = t->strides[i];
+void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask){
+    assert(A != NULL);
+    assert(A->shape[3] == 1);
+
+    //checks if P has weird size
+    if((*P) != NULL){
+        assert((*P)->shape[3] == 1 && "Error, WRONG pooling mask shape[3] must be 1");
     }
-    (*m)->flatten_size = t->flatten_size;
+
+    //Checks if P needs allocation
+    uint8_t needs_realloc = (*P) == NULL || (*P)->shape[0] != (A->shape[0]+1)/2 ||            
+    (*P)->shape[1] != (A->shape[1]+1)/2 || (*P)->shape[2] != A->shape[2]; 
+
+    //Proceed to P and pooling Mask reallocation
+    if(needs_realloc){
+        if((*P) != NULL){free_tensor4(P);}
+        (*P) = (tensor4_t*)init_tensor4((A->shape[0]+1)/2,(A->shape[1]+1)/2,A->shape[2],1,NOFILL);
+        
+        if((*Pooling_Mask) != NULL) free(*Pooling_Mask);
+        (*Pooling_Mask) = calloc(A->flatten_size, sizeof(uint8_t));
+    }
+
 
     size_t store_index = 0;    
-    for(size_t idx_im = 0; idx_im <t->strides[3]; idx_im+= t->strides[2]){
-        for(size_t idx_row = 0; idx_row < t->strides[2]; idx_row += 2*t->strides[1]){
-            for(size_t idx_col = 0; idx_col < t->strides[1]; idx_col += 2){
-                
+    for(size_t idx_im = 0; idx_im <A->strides[3]; idx_im+= A->strides[2]){
+        for(size_t idx_row = 0; idx_row < A->strides[2]; idx_row += 2*A->strides[1]){
+            for(size_t idx_col = 0; idx_col < A->strides[1]; idx_col += 2){
 
                 float max_val;
                 size_t max_index;
 
-
                 size_t a = idx_im + idx_row + idx_col;
                 size_t b = a + 1;
-                size_t c = a + t->strides[1];
+                size_t c = a + A->strides[1];
                 size_t d = c + 1;
                 
 
                 //Bound check
-                if((idx_row + t->strides[1] >= t->strides[2]) && (idx_col+1 >= t->strides[1])){
-                    max_val = t->datas[a];
+                if((idx_row + A->strides[1] >= A->strides[2]) && (idx_col+1 >= A->strides[1])){
+                    max_val = A->datas[a];
                     max_index = a;
 
-                } else if(idx_row + t->strides[1] >= t->strides[2]){
-                    max_val = MAX(t->datas[a],t->datas[b]);
-                    max_index = (t->datas[a] >= t->datas[b]) ? a : b;
+                } else if(idx_row + A->strides[1] >= A->strides[2]){
+                    max_val = MAX(A->datas[a],A->datas[b]);
+                    max_index = (A->datas[a] >= A->datas[b]) ? a : b;
 
-                } else if((idx_col+1 >= t->strides[1])){
-                    max_val = MAX(t->datas[a],t->datas[c]);
-                    max_index = (t->datas[a] >= t->datas[c]) ? a :c;
+                } else if((idx_col+1 >= A->strides[1])){
+                    max_val = MAX(A->datas[a],A->datas[c]);
+                    max_index = (A->datas[a] >= A->datas[c]) ? a :c;
 
                 } else {
-                    max_val = max4(t->datas[a], t->datas[b], t->datas[c], t->datas[d]);
-                    max_index = maxindex4(t->datas[a], t->datas[b], t->datas[c], t->datas[d],a,b,c,d);
+                    max_val = max4(A->datas[a], A->datas[b], A->datas[c], A->datas[d]);
+                    max_index = maxindex4(A->datas[a], A->datas[b], A->datas[c], A->datas[d],a,b,c,d);
                 }
-
-               
-                
-                
-                (*m)->datas[max_index] = (uint8_t)1;
-                t->datas[store_index++] = max_val;
-
+                (*Pooling_Mask)[max_index] = (uint8_t)1;
+                (*P)->datas[store_index++] = max_val;
                 
             }
         }
     }
 
-    t->shape[0] = (t->shape[0]+1)/2;
+    /* t->shape[0] = (t->shape[0]+1)/2;
     t->shape[1] = (t->shape[1]+1)/2;
 
     t->strides[1] = t->shape[0];
@@ -200,7 +206,7 @@ void MaxPool(tensor4_t *t, tensor4_mask_t **m){
 
 
     t->datas = realloc(t->datas, sizeof(float)*t->flatten_size);
-    assert(t->datas != NULL && "[MaxPool] realloc failed");
+    assert(t->datas != NULL && "[MaxPool] realloc failed"); */
 }
 
 void addBias(tensor4_t *t, const float *b){
@@ -286,13 +292,13 @@ static void cumulate(float *acc, float *source, size_t cumulate_size){
 
 
 
-static size_t get_conv_dim(tensor4_t *X, tensor4_t *K, uint8_t axis, padding_t type){
+static size_t get_conv_dim(const tensor4_t *X, const tensor4_t *K, uint8_t axis, padding_t type){
     assert(axis < 2 && "Error : axis must be 0 (cols) or 1 (rows)");
     assert(K->shape[axis] <= X->shape[axis] && "Error : kernel bigger than input on this axis");
     return  ((type == VALID) ? (X->shape[0]- K->shape[0] + 1) : X->shape[0]);
 }
 
-tensor4_t *conv_cumulate(tensor4_t *X, tensor4_t *K, padding_t type, tensor4_t **Z)
+tensor4_t *conv_cumulate(const tensor4_t *X, const tensor4_t *K, const padding_t type, tensor4_t **Z)
 {
     assert(X != NULL && "Error conv_cumulate : NULL X parameter");
     assert(K != NULL && "Error during conv cumulate : NULL K");
@@ -308,7 +314,7 @@ tensor4_t *conv_cumulate(tensor4_t *X, tensor4_t *K, padding_t type, tensor4_t *
     uint8_t needs_alloc =   (*Z) == NULL ||
                             (*Z)->shape[0] != Z_cols || 
                             (*Z)->shape[1] != Z_rows ||
-                            (*Z)->shape[2] != Z_fmaps;
+                            (*Z)->shape[2] != Z_fmaps; //shape 3 différente de 1
 
     if(needs_alloc){
         

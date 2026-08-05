@@ -34,7 +34,7 @@ typedef struct{
     //->Back prop cache
     //tensor4_t *P_Prev;                  // <=> à X passé en input
     tensor4_t *A;                       // <=> RELU(Z)
-    tensor4_mask_t *Pooling_Mask;       //Masque de pooling
+    uint8_t *Pooling_Mask;              //Masque de pooling
 
 
     //-> Output

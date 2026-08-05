@@ -46,14 +46,6 @@ typedef struct{
     float *datas;
 } tensor4_t;
 
-//Used for pooling Mask, size is the same as A
-typedef struct{
-    size_t flatten_size;
-    size_t shape[4];
-    size_t strides[4];
-    uint8_t *datas;
-} tensor4_mask_t;
-
 
 
 //----------------------------------//            
@@ -76,10 +68,16 @@ return t->datas[get_t4_idx(t,idx0,idx1,idx2,idx3)];}
 static inline void set_t4_val(tensor4_t *t, float val, size_t idx0, size_t idx1, size_t idx2, size_t idx3){
 t->datas[get_t4_idx(t,idx0,idx1,idx2,idx3)] = val;}
 
+//Updates strides, Chat I think it's useless
+static inline void update_t4_strides(tensor4_t *t){
+    t->strides[0] = 1; t->strides[1] = t->shape[0]; t->strides[2] = t->shape[0]*t->shape[1]; t->strides[3] = t->shape[0]*t->shape[1]*t->shape[2];
+    t->flatten_size = t->strides[3];
+}
+
 //Print infos on tensors
 void print_tensor4_shape(const tensor4_t *t);
 void print_tensor4_data(const tensor4_t *t);
-void print_tensor4_mask_data(const tensor4_mask_t *t);
+void print_tensor4_mask(const uint8_t *mask, const tensor4_t *t);
 
 //Operations on tensors
 
@@ -90,13 +88,13 @@ void conv(      float *im, size_t im_cols, size_t im_rows,
 
 void ReLU(tensor4_t *t);
 
-void MaxPool(tensor4_t *t, tensor4_mask_t **m);
+void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask);
 
 void addBias(tensor4_t *t, const float *b);
 
 
 //X is the input, K the parameters, type padding type and Z the output parameter
-tensor4_t* conv_cumulate(tensor4_t *X, tensor4_t *K, padding_t type, tensor4_t **Z);
+tensor4_t* conv_cumulate(const tensor4_t *X, const tensor4_t *K, const padding_t type, tensor4_t **Z);
 
 /* void print_mask(const uint8_t *mask,size_t d0, size_t d1, size_t d2); */
 //static ma_methode();

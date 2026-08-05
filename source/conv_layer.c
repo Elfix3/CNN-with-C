@@ -36,6 +36,7 @@ void clean_conv_layer(ConvLayer *l){
 void forward(ConvLayer *l, tensor4_t *X){
     assert(l != NULL && "[forward] : null input layer");
     assert(X != NULL && "[forward] : null input maps");
+    assert(l->K->shape[2] == X->shape[2] && "[forward] : Error non matching input to the K-tensor");
 
     double start = omp_get_wtime();
     

@@ -43,20 +43,27 @@ int main(){
     //tensor4_t *im = init_tensor4(4,6,1,1,UNIFORM);
     //print_tensor4_data(im);
     //<--- Forward example --->//
-    ConvLayer *l = init_conv_layer(60,2,2,VALID);
-    tensor4_t *mt = init_tensor4(1000,1000,2,1,UNIFORM);
+   /*  ConvLayer *l = init_conv_layer(3,1,32,SAME);
+    tensor4_t *mt = init_tensor4(28,28,1,1,UNIFORM);
     forward(l, mt);
+    print_tensor4_shape(l->A);
 
-    /* uint8_t *mask;
+    ConvLayer *y = init_conv_layer(3,l->A->shape[2],32,SAME);
+    forward(y, l->A);
+    print_tensor4_shape(y->A); */
 
-    tensor4_t *mt = init_tensor4(4,4,3,1,UNIFORM);
-    print_tensor4_data(mt);
+    tensor4_t *A = init_tensor4(4,4,1,1,UNIFORM);
+    tensor4_t *P = NULL;
+    uint8_t *Pooling_Mask = NULL;
 
-    size_t originalsz = mt->flatten_size;
-    MaxPool(mt,&mask);
-    print_mask(mask,4,4,3);
-    print_tensor4_data(mt);
-     */
+    MaxPool(A,&P,&Pooling_Mask);
+    printf("A : \n");
+    print_tensor4_data(A);
 
+    printf("P : \n");
+    print_tensor4_data(P);
+
+    printf("Masque : \n");
+    print_tensor4_mask(Pooling_Mask,A);
     return 0;
 }
