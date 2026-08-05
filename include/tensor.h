@@ -77,31 +77,30 @@ static inline void update_t4_strides(tensor4_t *t){
 //Print infos on tensors
 void print_tensor4_shape(const tensor4_t *t);
 void print_tensor4_data(const tensor4_t *t);
-void print_tensor4_mask(const uint8_t *mask, const tensor4_t *t);
+void print_tensor4_mask(const uint8_t *mask, const tensor4_t *A);
 
 //Operations on tensors
 
-void conv(      float *im, size_t im_cols, size_t im_rows,
-                float *kernel, size_t k_cols, size_t k_rows,
-                float *conv_result, size_t c_cols, size_t c_rows,
-                padding_t type);
 
-void ReLU(tensor4_t *t);
 
-void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask);
-
-void addBias(tensor4_t *t, const float *b);
-
+//2D elementary convolution
+void conv(
+float *im, size_t im_cols, size_t im_rows,
+float *kernel, size_t k_cols, size_t k_rows,
+float *conv_result, size_t c_cols, size_t c_rows,
+padding_t type);
 
 //X is the input, K the parameters, type padding type and Z the output parameter
 tensor4_t* conv_cumulate(const tensor4_t *X, const tensor4_t *K, const padding_t type, tensor4_t **Z);
 
-/* void print_mask(const uint8_t *mask,size_t d0, size_t d1, size_t d2); */
-//static ma_methode();
+//Adds constants to the maps, on the shape[2] Axis
+void addBias(tensor4_t *t, const float *b);
 
-//Méthodes pensées pour les couches dense ...c'est plus du tensor
-//float* SoftMax(float tab, size_t size);
+//Performs ReLU
+void ReLU(tensor4_t *t);
 
+//Performs MaxPool with a stored uint8 pooling mask
+void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask);
 
 
 

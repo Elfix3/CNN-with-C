@@ -27,7 +27,7 @@ typedef struct{
 
     //-> Parameters
     tensor4_t *K;           //shape(qize_k * size_k * n_maps * n_filters)
-    float *B;               //shape(n_cols * 1 * 1 * 1) //make it a tensor ?
+    float *b;               //shape(n_cols * 1 * 1 * 1) //make it a tensor ?
     padding_t padding_type;
    //More tensor4_t for adam optimisation, for K and B both momentum and RMSprop
 
