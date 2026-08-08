@@ -15,15 +15,31 @@ typedef enum{
 
 
 typedef struct{
-    
-    tensor4_t *weights;         //Dimension size of input * N_neurons
-    float *biases;
+    //Operation ;
+    //X ---->   [*W + b]              ----> Z
+    //Z ---->   [ReLU or SOFTMAX]     ----> A
 
-    size_t n_out;       //Number of neurons nececarry ?
+    //-> Input 
+    const float *X;             //INPUT POINTER NOT OWNED
+
+    //-> Parameters
+    tensor4_t *W;         //Store all the sizes (n_input, m_neurons, 1, 1)
+    float *b;
+
+    //-> Activation
+    activation_t activation_type;
+
+    //->Back prop cache
+    tensor4_t *dW;
+    float   *dB;
+
+    //-> Output
+    float *A;           //Goes to the next layer            <--- FORWARD
+    float *dX;           //Goes to the previous layer       <--- BACKWARD
 
 } DenseLayer;
 
-
-DenseLayer* init_dense(distribution_t type);    //Add some dimensions as well
+//**n is the number of inputs, m the number of neurons/
+DenseLayer* init_dense(size_t n, size_t m, activation_t type);    //Add some dimensions as well
 
 #endif

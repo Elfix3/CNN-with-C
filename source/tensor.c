@@ -260,7 +260,7 @@ void conv(      float *im, size_t im_cols, size_t im_rows,
 
     case VALID:
 
-        #pragma omp parallel for
+        //#pragma omp parallel for
         for(size_t i = 0; i<c_cols*c_rows;i++){
             int x = i/c_cols;   //row number
             int y = i%c_cols;   //col number
