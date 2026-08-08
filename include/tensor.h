@@ -56,6 +56,12 @@ typedef struct{
 tensor4_t* init_tensor4(size_t d0, size_t d1, size_t d2, size_t d3, distribution_t type);
 void free_tensor4(tensor4_t **t);
 
+
+
+//----------------------------------//            
+//---           Access           ---//
+//----------------------------------//
+
 //Access to a given index
 static inline size_t get_t4_idx(tensor4_t *t,size_t idx0, size_t idx1, size_t idx2, size_t idx3){
 return idx0*t->strides[0] + idx1*t->strides[1] + idx2*t->strides[2] + idx3*t->strides[3];} 
@@ -68,20 +74,19 @@ return t->datas[get_t4_idx(t,idx0,idx1,idx2,idx3)];}
 static inline void set_t4_val(tensor4_t *t, float val, size_t idx0, size_t idx1, size_t idx2, size_t idx3){
 t->datas[get_t4_idx(t,idx0,idx1,idx2,idx3)] = val;}
 
-//Updates strides, Chat I think it's useless
-static inline void update_t4_strides(tensor4_t *t){
-    t->strides[0] = 1; t->strides[1] = t->shape[0]; t->strides[2] = t->shape[0]*t->shape[1]; t->strides[3] = t->shape[0]*t->shape[1]*t->shape[2];
-    t->flatten_size = t->strides[3];
-}
-
+//----------------------------------//            
+//---           Display          ---//
+//----------------------------------//
 //Print infos on tensors
 void print_tensor4_shape(const tensor4_t *t);
 void print_tensor4_data(const tensor4_t *t);
 void print_tensor4_mask(const uint8_t *mask, const tensor4_t *A);
 
-//Operations on tensors
 
 
+//----------------------------------//            
+//---         Operation          ---//
+//----------------------------------//
 
 //2D elementary convolution
 void conv(
@@ -102,6 +107,7 @@ void ReLU(tensor4_t *t);
 //Performs MaxPool with a stored uint8 pooling mask
 void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask);
 
-
+//Performs the multiplication of W*X
+void matvec(const float *X, const tensor4_t *W, float **Z);
 
 #endif

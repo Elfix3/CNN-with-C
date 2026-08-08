@@ -32,6 +32,14 @@ ConvLayer *init_conv_layer(size_t kernel_size, size_t n_fmap, size_t n_filter, p
 }
 
 void clean_conv_layer(ConvLayer *l){
+    assert(l != NULL && "Error null pointer in clean_conv_layer");
+    
+    free(l->Pooling_Mask);
+    free_tensor4(l->dK);
+    free_tensor4(l->dB);
+    free_tensor4(l->A);
+    free_tensor4(l->P);
+    free_tensor4(l->dX);
 
 }
 

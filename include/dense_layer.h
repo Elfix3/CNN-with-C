@@ -23,7 +23,7 @@ typedef struct{
     const float *X;             //INPUT POINTER NOT OWNED
 
     //-> Parameters
-    tensor4_t *W;         //Store all the sizes (n_input, m_neurons, 1, 1)
+    tensor4_t *W;               //Store all the sizes (n_input, m_neurons, 1, 1)
     float *b;
 
     //-> Activation

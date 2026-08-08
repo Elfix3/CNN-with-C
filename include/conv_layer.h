@@ -25,8 +25,6 @@ typedef struct{
     //-> Padding
     padding_t padding_type;
    
-    
-
     //->Back prop cache
     tensor4_t *dK;
     float   *dB;
@@ -44,6 +42,8 @@ typedef struct{
 
 /**Initializes the parameters of the layer */
 ConvLayer *init_conv_layer(size_t kernel_size ,size_t n_fmap, size_t n_filter, padding_t type);
+
+//Clears data except parameters
 void clean_conv_layer(ConvLayer *l);
 
 void forward(ConvLayer *l, const tensor4_t *X);

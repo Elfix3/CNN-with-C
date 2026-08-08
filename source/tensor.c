@@ -209,6 +209,12 @@ void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask){
     assert(t->datas != NULL && "[MaxPool] realloc failed"); */
 }
 
+void matvec(const float *X, const tensor4_t *W, float **Z){
+    assert(X != NULL && W != NULL && "Error matvec : null parameter");
+
+}
+
+
 void addBias(tensor4_t *t, const float *b){
     //We assume b is n_feature map === shape[2] sized.
     assert(b != NULL && "Error Null ptr bias");
