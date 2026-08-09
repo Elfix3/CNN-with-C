@@ -63,15 +63,15 @@ void free_tensor4(tensor4_t **t);
 //----------------------------------//
 
 //Access to a given index
-static inline size_t get_t4_idx(tensor4_t *t,size_t idx0, size_t idx1, size_t idx2, size_t idx3){
+static inline size_t get_t4_idx(const tensor4_t *t,size_t idx0, size_t idx1, size_t idx2, size_t idx3){
 return idx0*t->strides[0] + idx1*t->strides[1] + idx2*t->strides[2] + idx3*t->strides[3];} 
 
 //Access to a given val index based
-static inline float get_t4_val(tensor4_t *t, size_t idx0, size_t idx1, size_t idx2, size_t idx3){
+static inline float get_t4_val(const tensor4_t *t, size_t idx0, size_t idx1, size_t idx2, size_t idx3){
 return t->datas[get_t4_idx(t,idx0,idx1,idx2,idx3)];}
 
 //Set a given val
-static inline void set_t4_val(tensor4_t *t, float val, size_t idx0, size_t idx1, size_t idx2, size_t idx3){
+static inline void set_t4_val(const tensor4_t *t, float val, size_t idx0, size_t idx1, size_t idx2, size_t idx3){
 t->datas[get_t4_idx(t,idx0,idx1,idx2,idx3)] = val;}
 
 //----------------------------------//            
@@ -96,13 +96,19 @@ float *conv_result, size_t c_cols, size_t c_rows,
 padding_t type);
 
 //X is the input, K the parameters, type padding type and Z the output parameter
-tensor4_t* conv_cumulate(const tensor4_t *X, const tensor4_t *K, const padding_t type, tensor4_t **Z);
+void conv_cumulate(const tensor4_t *X, const tensor4_t *K, const padding_t type, tensor4_t **Z);
 
 //Adds constants to the maps, on the shape[2] Axis
 void addBias(tensor4_t *t, const float *b);
 
 //Performs ReLU
-void ReLU(tensor4_t *t);
+void ReLU(float *tab, size_t size);
+
+//Adds biais for a float buffer
+void addBias_buffer(float *buffer, const float *b, size_t size);
+
+//Performs Softmax
+void SoftMax(float *tab, size_t size);
 
 //Performs MaxPool with a stored uint8 pooling mask
 void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask);

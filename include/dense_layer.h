@@ -42,4 +42,6 @@ typedef struct{
 //**n is the number of inputs, m the number of neurons/
 DenseLayer* init_dense(size_t n, size_t m, activation_t type);    //Add some dimensions as well
 
+void forward_dense(DenseLayer *l, const float *X);
+
 #endif

@@ -35,11 +35,11 @@ void clean_conv_layer(ConvLayer *l){
     assert(l != NULL && "Error null pointer in clean_conv_layer");
     
     free(l->Pooling_Mask);
-    free_tensor4(l->dK);
-    free_tensor4(l->dB);
-    free_tensor4(l->A);
-    free_tensor4(l->P);
-    free_tensor4(l->dX);
+    free_tensor4(&l->dK);
+    free(l->dB);
+    free_tensor4(&l->A);
+    free_tensor4(&l->P);
+    free_tensor4(&l->dX);
 
 }
 
@@ -61,7 +61,7 @@ void forward(ConvLayer *l, const tensor4_t *X){
     //print_tensor4_data(l->A);
 
 
-    ReLU(l->A);
+    ReLU(l->A->datas,l->A->flatten_size);
     //printf("\n\n Valeur post ReLU : \n\n");
     //print_tensor4_data(l->A);
     

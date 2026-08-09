@@ -118,20 +118,48 @@ void print_tensor4_mask(const uint8_t *mask, const tensor4_t *A){
     printf("\n\n");
 }
 
-void ReLU(tensor4_t *t){
-    //*mask = (uint8_t*)calloc(t->flatten_size,sizeof(uint8_t));
+void ReLU(float *tab, size_t size){
+    
+    assert(tab != NULL && "Error Null ptr buffer");
 
-    for(size_t i = 0; i<t->flatten_size; i++){
-        if(t->datas[i] < 0){
-            t->datas[i] = 0;
+    for(size_t i = 0; i<size; i++){
+        if(tab[i] < 0){
+            tab[i] = 0;
         }
-        /* else {
-            (*mask)[i] = 1;
-        } */
-        
     }
 }
 
+
+//bof bof
+void addBias_buffer(float *buffer, const float *b, size_t size){
+    
+    assert(buffer != NULL && "Error Null ptr buffer");
+    assert(b != NULL && "Error Null ptr bias");
+
+    for(size_t i = 0; i<size; i++){
+        buffer[i] += b[i];
+    }
+}
+
+void SoftMax(float *tab, size_t size){
+
+    float max = tab[0];    
+    for(size_t i = 1; i<size; i++){
+        if(tab[i]>max){
+            max = tab[i];
+        }
+    }
+    
+    float sumExp = 0;
+    for(size_t i = 0; i<size; i++){
+        tab[i] = expf(tab[i] - max);
+        sumExp += tab[i];
+    }
+
+    for(size_t i = 0; i<size; i++){
+        tab[i] /= sumExp;
+    }
+}
 
 
 void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask){
@@ -209,10 +237,7 @@ void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask){
     assert(t->datas != NULL && "[MaxPool] realloc failed"); */
 }
 
-void matvec(const float *X, const tensor4_t *W, float **Z){
-    assert(X != NULL && W != NULL && "Error matvec : null parameter");
 
-}
 
 
 void addBias(tensor4_t *t, const float *b){
@@ -304,7 +329,7 @@ static size_t get_conv_dim(const tensor4_t *X, const tensor4_t *K, uint8_t axis,
     return  ((type == VALID) ? (X->shape[0]- K->shape[0] + 1) : X->shape[0]);
 }
 
-tensor4_t *conv_cumulate(const tensor4_t *X, const tensor4_t *K, const padding_t type, tensor4_t **Z)
+void conv_cumulate(const tensor4_t *X, const tensor4_t *K, const padding_t type, tensor4_t **Z)
 {
     assert(X != NULL && "Error conv_cumulate : NULL X parameter");
     assert(K != NULL && "Error during conv cumulate : NULL K");
@@ -373,42 +398,22 @@ tensor4_t *conv_cumulate(const tensor4_t *X, const tensor4_t *K, const padding_t
 }
 
 
-/* void print_mask(const uint8_t *mask, size_t d0, size_t d1, size_t d2){
-    size_t flat_size = d0*d1*d2;
-    for(size_t i = 0; i<flat_size; i++){
-        if(!(i%d0)){
-            printf("\n");
-        }
-
-        if((d2 != 1) && !(i%(d0*d1)) ){
-            printf("\nFeature map : %zu\n", ((i%(d0*d1*d2))/(d0*d1)));
-        }
-        printf("%zu ",mask[i]);
-    }
-} */
-
-/* float *SoftMax(float input, size_t size){
-    return NULL;
-}
-
-float SoftMax(float *tab, size_t size, size_t target_index){
-
-    float null_threshold = 0.000001f;
-    float max = tab[0];
-    float sumExp = 0.0f;
-
-    //Trouve le max pour la stabilité Softmax(Zi-Zmax) = Softmax(Zi)
-    for(size_t i = 1; i <size; i++){
-        if(exp(tab[i])>max){
-            max = tab[i];
-        }
-    }
-
-    for(size_t i = 0; i<size; i++){
-        sumExp += (float)exp(tab[i] - max);
-    }
-
-    return (float)exp(tab[target_index] - max) / (float)sumExp;
-}
+void matvec(const float *X, const tensor4_t *W, float **Z){
+    //W is size(m,n), X is size(n,1) => Z is size 
     
- */
+    assert(X != NULL && W != NULL && "Error matvec : null parameter");
+    assert(W->shape[2] == 1 && W->shape[3] == 1 && "Error, unmaching dimension for a matrix");
+    
+    if((*Z) == NULL){
+        *Z = calloc(W->shape[1],sizeof(float));
+    } else {
+        memset(*Z,0,W->shape[1]*sizeof(float));
+    }
+
+    #pragma omp parallel for
+    for(size_t m = 0; m < W->shape[1]; m++){
+        for(size_t n = 0; n < W->shape[0]; n++){
+            (*Z)[m] += get_t4_val(W,n,m,0,0)*X[n];
+        }    
+    }
+}
