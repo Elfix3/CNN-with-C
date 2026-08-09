@@ -1,6 +1,6 @@
 # === Configuration ===
 CC       := gcc
-CFLAGS   := -Wall -Wextra -std=c11 -Iinclude -fopenmp
+CFLAGS   := -Wall -Wextra -std=c11 -Iinclude -fopenmp -O3
 LDFLAGS  := -fopenmp
 
 SRC_DIR   := source

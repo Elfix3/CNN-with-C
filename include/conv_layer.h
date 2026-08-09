@@ -46,6 +46,7 @@ ConvLayer *init_conv_layer(size_t kernel_size ,size_t n_fmap, size_t n_filter, p
 //Clears data except parameters
 void clean_conv_layer(ConvLayer *l);
 
+//X has : (x*y*N_features*N_Batch)
 void forward(ConvLayer *l, const tensor4_t *X);
 void backward(ConvLayer *l, const tensor4_t *dP);
 
