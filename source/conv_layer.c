@@ -108,7 +108,8 @@ void forward(ConvLayer *l, const tensor4_t *X){
     //l->P = conv_output;
 }
 
-
+void backward(ConvLayer *l, const tensor4_t *dP){
+}
 
 //Kinda useless
 /* static inline void set_input(ConvLayer *l,tensor4_t * input){
