@@ -52,8 +52,8 @@ void forward(ConvLayer *l, const tensor4_t *X){
     //double start = omp_get_wtime();
     
     conv_cumulate(X,l->K,l->padding_type,&l->A);
-    //printf("\n\n Valeur conv : \n\n");
-    //print_tensor4_data(l->A);
+    
+    
 
     
     addBias(l->A,l->b);

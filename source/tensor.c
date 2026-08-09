@@ -164,21 +164,16 @@ void SoftMax(float *tab, size_t size){
 
 void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask){
     assert(A != NULL);
-    assert(A->shape[3] == 1);
 
-    //checks if P has weird size
-    if((*P) != NULL){
-        assert((*P)->shape[3] == 1 && "Error, WRONG pooling mask shape[3] must be 1");
-    }
 
     //Checks if P needs allocation
     uint8_t needs_realloc = (*P) == NULL || (*P)->shape[0] != (A->shape[0]+1)/2 ||            
-    (*P)->shape[1] != (A->shape[1]+1)/2 || (*P)->shape[2] != A->shape[2]; 
+    (*P)->shape[1] != (A->shape[1]+1)/2 || (*P)->shape[2] != A->shape[2] || (*P)->shape[3] != A->shape[3];
 
     //Proceed to P and pooling Mask reallocation
     if(needs_realloc){
         if((*P) != NULL){free_tensor4(P);}
-        (*P) = (tensor4_t*)init_tensor4((A->shape[0]+1)/2,(A->shape[1]+1)/2,A->shape[2],1,NOFILL);
+        (*P) = (tensor4_t*)init_tensor4((A->shape[0]+1)/2,(A->shape[1]+1)/2,A->shape[2],A->shape[3],NOFILL);
         
         if((*Pooling_Mask) != NULL) free(*Pooling_Mask);
         (*Pooling_Mask) = calloc(A->flatten_size, sizeof(uint8_t));
@@ -186,6 +181,11 @@ void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask){
 
 
     size_t store_index = 0;    
+
+    //for each image
+    
+
+    //foreach FEATURE MAP NOT IMAGE
     for(size_t idx_im = 0; idx_im <A->strides[3]; idx_im+= A->strides[2]){
         for(size_t idx_row = 0; idx_row < A->strides[2]; idx_row += 2*A->strides[1]){
             for(size_t idx_col = 0; idx_col < A->strides[1]; idx_col += 2){
@@ -331,26 +331,27 @@ static size_t get_conv_dim(const tensor4_t *X, const tensor4_t *K, uint8_t axis,
 
 void conv_cumulate(const tensor4_t *X, const tensor4_t *K, const padding_t type, tensor4_t **Z)
 {
+    //X has dimension : x*y*n*m (n is the number of feature maps per image, m is the number of images in a batch)
     assert(X != NULL && "Error conv_cumulate : NULL X parameter");
     assert(K != NULL && "Error during conv cumulate : NULL K");
     assert(Z != NULL && "Error during conv cumulate : NULL Z");
-    
-    //Vérifier correspondance entre  X->shape[2] et K->shape[2]
+
+    assert(X->shape[2] == K->shape[2]);
 
     size_t Z_cols = get_conv_dim(X,K,0,type);
-    size_t Z_rows = get_conv_dim(X,K,1,type);
+    size_t Z_rows = get_conv_dim(X,K,1,type);    
     size_t Z_fmaps = K->shape[3];
+    size_t Z_batch = X->shape[3];
 
-    //
     uint8_t needs_alloc =   (*Z) == NULL ||
                             (*Z)->shape[0] != Z_cols || 
                             (*Z)->shape[1] != Z_rows ||
-                            (*Z)->shape[2] != Z_fmaps; //shape 3 différente de 1
-
+                            (*Z)->shape[2] != Z_fmaps || 
+                            (*Z)->shape[3] != Z_batch;
     if(needs_alloc){
         
         if (*Z != NULL) {free_tensor4(Z);}
-        (*Z) = (tensor4_t*)init_tensor4(Z_cols, Z_rows, Z_fmaps, 1, NOFILL);
+        (*Z) = (tensor4_t*)init_tensor4(Z_cols, Z_rows, Z_fmaps, Z_batch, NOFILL);
         LOG("Output tensor allocated, calculation starts");
 
     } else {
@@ -363,34 +364,39 @@ void conv_cumulate(const tensor4_t *X, const tensor4_t *K, const padding_t type,
     float* conv_buffer = calloc(flat_conv_size,sizeof(float));
     
 
-    //For each filter
+    
     //#pragma omp parallel for
-    for(size_t idx_filter = 0; idx_filter < K->shape[3]; idx_filter++){
-        //We reset the accumulator
-        acc = memset(acc,0,sizeof(float)*flat_conv_size);
 
+    //For each image in the batch
+    for(size_t idx_batch = 0; idx_batch < X->shape[3]; idx_batch ++){
+
+        //For each filter
+        for(size_t idx_filter = 0; idx_filter < K->shape[3]; idx_filter++){
+        
+            //Accumulator reset
+            acc = memset(acc,0,sizeof(float)*flat_conv_size);
 
         //For each Feature map
-        for(size_t idx_fmap = 0; idx_fmap < K->shape[2]; idx_fmap++){
-            memset(conv_buffer,0,sizeof(float)*flat_conv_size);
-            
-            conv(
-                X->datas + get_t4_idx(X,0,0,idx_fmap,0),                        //Feature map indexée par idx_fmap
-                X->shape[0],
-                X->shape[1],
+            for(size_t idx_fmap = 0; idx_fmap < K->shape[2]; idx_fmap++){
+                memset(conv_buffer,0,sizeof(float)*flat_conv_size);
+                conv(
+                    X->datas + get_t4_idx(X,0,0,idx_fmap,idx_batch),          //Feature map indexée par la feature map et le numéro du batch
+                    X->shape[0],
+                    X->shape[1],
 
-                K->datas + get_t4_idx(K,0,0,idx_fmap,idx_filter),        //Kernel indexé par la feature map et le numéro du filtre
-                K->shape[0],
-                K->shape[1],
-                
-                conv_buffer,        
-                Z_cols,             //Peut être déduit, mais demande un calcul à nouveau
-                Z_rows, 
-                type
-            );
-            cumulate(acc,conv_buffer, flat_conv_size);
+                    K->datas + get_t4_idx(K,0,0,idx_fmap,idx_filter),        //Kernel indexé par la feature map et le numéro du filtre
+                    K->shape[0],
+                    K->shape[1],
+                    
+                    conv_buffer,        
+                    Z_cols,
+                    Z_rows, 
+                    type
+                );
+                cumulate(acc,conv_buffer, flat_conv_size);
+            }
+        memcpy((*Z)->datas+get_t4_idx((*Z),0,0,idx_filter,idx_batch), acc, flat_conv_size*sizeof(float));
         }
-        memcpy((*Z)->datas+get_t4_idx((*Z),0,0,idx_filter,0), acc, flat_conv_size*sizeof(float));
     }
 
     free(conv_buffer);
@@ -398,6 +404,8 @@ void conv_cumulate(const tensor4_t *X, const tensor4_t *K, const padding_t type,
 }
 
 
+
+//modify this to have tensor X as input
 void matvec(const float *X, const tensor4_t *W, float **Z){
     //W is size(m,n), X is size(n,1) => Z is size 
     
