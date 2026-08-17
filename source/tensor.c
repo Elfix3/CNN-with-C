@@ -258,7 +258,7 @@ void addBias(tensor4_t *t, const float *b){
     }
 }
 
-
+//should use tensor4_t
 void conv(      float *im, size_t im_cols, size_t im_rows,
                 float *kernel, size_t k_cols, size_t k_rows,
                 float *conv_result, size_t c_cols, size_t c_rows,
@@ -424,4 +424,36 @@ void matvec(const float *X, const tensor4_t *W, float **Z){
             (*Z)[m] += get_t4_val(W,n,m,0,0)*X[n];
         }    
     }
+}
+
+void convNew(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right){
+    //size
+    size_t Z_Cols = X->shape[0]-K->shape[0] + 1 + pad_left + pad_right;
+    size_t Z_Rows = X->shape[1]-K->shape[1] + 1 + pad_top + pad_bottom;
+
+    (*Z) = (tensor4_t*)init_tensor4(Z_Cols,Z_Rows,1,1,NOFILL);
+    if(*Z == NULL){
+        fprintf(stderr, "Error, output conv Z badalloc");
+    }
+
+
+
+    for(size_t rZ = 0; rZ < (*Z)->shape[1]; rZ++){
+        for(size_t cZ = 0; cZ < (*Z)->shape[0]; cZ++){
+            
+            float acc = 0.0f;
+            for(size_t rK = 0; rK < K->shape[1]; rK++){
+                for(size_t cK = 0; cK < K->shape[1]; cK++){
+                    
+                    uint8_t outBounds = 0;
+                    acc += get_t4_val(K,cK,rK,1,1);
+                    
+                }
+            }
+        }
+    }
+
+
+
+
 }

@@ -62,7 +62,10 @@ void free_tensor4(tensor4_t **t);
 //---           Access           ---//
 //----------------------------------//
 
-//Access to a given index
+
+//GERER LES ACCES INCORRECTS
+
+//Access to a given index 
 static inline size_t get_t4_idx(const tensor4_t *t,size_t idx0, size_t idx1, size_t idx2, size_t idx3){
 return idx0*t->strides[0] + idx1*t->strides[1] + idx2*t->strides[2] + idx3*t->strides[3];} 
 
@@ -115,5 +118,10 @@ void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask);
 
 //Performs the multiplication of W*X
 void matvec(const float *X, const tensor4_t *W, float **Z);
+
+void convNew(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z,
+          size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right);
+
+//Wrappers
 
 #endif
