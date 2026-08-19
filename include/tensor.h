@@ -123,5 +123,5 @@ void convNew(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z,
           size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right);
 
 //Wrappers
-
+void conv_SAME();
 #endif

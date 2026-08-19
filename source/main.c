@@ -88,6 +88,39 @@ int main(){
     end = omp_get_wtime();
     printf("Temps : %f secondes\n", end - start);
  */
+
+    //-------------------------------------//
+    //-----     TEST FOR NEWCONV      -----//
+    //-------------------------------------//
+    
+    tensor4_t *X = init_tensor4(5,5,1,1, UNIFORM);
+    tensor4_t *K = init_tensor4(3,3,1,1,UNIFORM);
+    tensor4_t *Z;
+    print_tensor4_data(X);
+    print_tensor4_data(K);
+    
+    convNew(X,K,&Z,0,0,0,0);
+    print_tensor4_data(Z);
+
+
+    convNew(X,K,&Z,1,1,1,1);
+    print_tensor4_data(Z);
+
+    convNew(X,K,&Z,2,2,2,2);
+    print_tensor4_data(Z);
+
+
+
+    /* convNew(X,K,&Z,1,0,1,0);
+    print_tensor4_data(Z);
+
+    convNew(X,K,&Z,0,1,0,1);
+    print_tensor4_data(Z);
+
+
+    convNew(X,K,&Z,1,1,1,1);
+    print_tensor4_data(Z); */
+
     return 0;
 }
 

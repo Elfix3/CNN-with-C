@@ -443,15 +443,18 @@ void convNew(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, size_t pad_t
             
             float acc = 0.0f;
             for(size_t rK = 0; rK < K->shape[1]; rK++){
-                for(size_t cK = 0; cK < K->shape[1]; cK++){
+                for(size_t cK = 0; cK < K->shape[0]; cK++){
                     
                     int cX = cK + cZ - pad_left;
                     int rX = rK + rZ - pad_top;
-                    short isOutBound = (cX < 0) ||(rX <0); //upper bound check as well
-                    acc += get_t4_val(K,cK,rK,1,1)*(isOutBound ? 0.0f : get_t4_val(X,cX,rX,1,1));
-                    
+                    //printf("%i : %i\n", cX, rX);
+                    short isOutBound = (cX < 0) ||(rX <0) || (cX > (int)X->shape[0]-1) ||(rX > (int)X->shape[1]-1); //upper bound check as well
+                    acc += get_t4_val(K,cK,rK,0,0)*(isOutBound ? 0.0f : get_t4_val(X,cX,rX,0,0));
+                    //printf("%.2f\n", get_t4_val(K,cK,rK,0,0));
                 }
+                //printf("%.2f\n",acc);
             }
+            set_t4_val((*Z),acc,cZ,rZ,0,0);
         }
     }
 
