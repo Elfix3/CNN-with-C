@@ -118,19 +118,17 @@ void print_tensor4_mask(const uint8_t *mask, const tensor4_t *A){
     printf("\n\n");
 }
 
-void ReLU(float *tab, size_t size){
-    
-    assert(tab != NULL && "Error Null ptr buffer");
+void ReLU(tensor4_t *T){
 
-    for(size_t i = 0; i<size; i++){
-        if(tab[i] < 0){
-            tab[i] = 0;
+    assert(T != NULL && "Error Null ptr buffer");
+    for(size_t i = 0; i<T->flatten_size; i++){
+        if (T->datas[i] < 0.0f) {
+            T->datas[i] = 0.0f;
         }
     }
 }
 
-
-//bof bof
+// bof bof
 void addBias_buffer(float *buffer, const float *b, size_t size){
     
     assert(buffer != NULL && "Error Null ptr buffer");
@@ -259,7 +257,7 @@ void addBias(tensor4_t *t, const float *b){
 }
 
 //should use tensor4_t
-void conv(      float *im, size_t im_cols, size_t im_rows,
+/* void conv(      float *im, size_t im_cols, size_t im_rows,
                 float *kernel, size_t k_cols, size_t k_rows,
                 float *conv_result, size_t c_cols, size_t c_rows,
                 padding_t type)
@@ -312,7 +310,7 @@ void conv(      float *im, size_t im_cols, size_t im_rows,
         break;
     }
 
-}
+} */
 
 static void cumulate(float *acc, float *source, size_t cumulate_size){
     for(size_t i = 0; i< cumulate_size; i++){
@@ -329,7 +327,56 @@ static size_t get_conv_dim(const tensor4_t *X, const tensor4_t *K, uint8_t axis,
     return  ((type == VALID) ? (X->shape[0]- K->shape[0] + 1) : X->shape[0]);
 }
 
-void conv_cumulate(const tensor4_t *X, const tensor4_t *K, const padding_t type, tensor4_t **Z)
+
+void conv(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding){
+    assert(X != NULL && "Error conv_cumulate : NULL X parameter");
+    assert(K != NULL && "Error during conv cumulate : NULL K");
+    assert(Z != NULL && "Error during conv cumulate : NULL Z");
+
+
+    size_t Z_cols;
+    size_t Z_rows;
+    size_t Z_fmaps = K->shape[3];       //Is the number of filter in K
+    size_t Z_batch = X->shape[3];
+
+    switch (padding){
+    
+    case SAME :
+        Z_cols = X->shape[0];
+        Z_rows = X->shape[1]; 
+    break;
+    
+    case VALID :
+        assert(X->shape[0] >= K->shape[0] &&"Error, kernel too wide for a VALID conv");
+        assert(X->shape[1] >= K->shape[1] && "Error, kernel too long for a VALID conv");
+        Z_cols = X->shape[0] - K->shape[0] + 1;
+        Z_rows = X->shape[1] - K->shape[1] + 1;
+    break;
+
+    case FULL :
+        Z_cols = X->shape[0] + K->shape[0] - 1;
+        Z_rows = X->shape[1] + K->shape[1] - 1;
+    break;
+
+    default:
+        assert(0 && "Error: invalid padding mode");
+        break;
+    }
+
+    if((*Z) == NULL){
+        (*Z) = (tensor4_t*)init_tensor4(Z_cols, Z_rows, Z_fmaps, Z_batch, NOFILL);
+    }
+
+
+    //Pour chaque image du batch
+        //Pour chaque filtre
+            //mon accumulateur
+            //Pour chaque feature map
+                //---> Convolution du Kernel par l'input
+                //---> Cumul dans mon accumulateur
+}
+
+/* void conv_cumulate(const tensor4_t *X, const tensor4_t *K, const padding_t type, tensor4_t **Z)
 {
     //X has dimension : x*y*n*m (n is the number of feature maps per image, m is the number of images in a batch)
     assert(X != NULL && "Error conv_cumulate : NULL X parameter");
@@ -401,7 +448,7 @@ void conv_cumulate(const tensor4_t *X, const tensor4_t *K, const padding_t type,
 
     free(conv_buffer);
     free(acc);
-}
+} */
 
 
 
@@ -426,7 +473,7 @@ void matvec(const float *X, const tensor4_t *W, float **Z){
     }
 }
 
-void convNew(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right){
+void convNew(const tensor4_t *X, const tensor4_t *K, const float b, tensor4_t **Z, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right){
     //size
     size_t Z_Cols = X->shape[0]-K->shape[0] + 1 + pad_left + pad_right;
     size_t Z_Rows = X->shape[1]-K->shape[1] + 1 + pad_top + pad_bottom;
@@ -437,7 +484,7 @@ void convNew(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, size_t pad_t
     }
 
 
-
+    //Whatever go my #pragma OMP for
     for(size_t rZ = 0; rZ < (*Z)->shape[1]; rZ++){
         for(size_t cZ = 0; cZ < (*Z)->shape[0]; cZ++){
             
@@ -447,18 +494,18 @@ void convNew(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, size_t pad_t
                     
                     int cX = cK + cZ - pad_left;
                     int rX = rK + rZ - pad_top;
-                    //printf("%i : %i\n", cX, rX);
+                    //coûteux... on accède juste pas aux K qui sortent ?
                     short isOutBound = (cX < 0) ||(rX <0) || (cX > (int)X->shape[0]-1) ||(rX > (int)X->shape[1]-1); //upper bound check as well
                     acc += get_t4_val(K,cK,rK,0,0)*(isOutBound ? 0.0f : get_t4_val(X,cX,rX,0,0));
                     //printf("%.2f\n", get_t4_val(K,cK,rK,0,0));
                 }
                 //printf("%.2f\n",acc);
             }
+            //---> Ajout biais
             set_t4_val((*Z),acc,cZ,rZ,0,0);
         }
     }
 
-
-
-
 }
+
+

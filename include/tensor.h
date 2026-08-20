@@ -30,6 +30,7 @@ typedef enum{
 typedef enum{
     VALID,          //Shrinks the input dimension : size_input-size_kernel + 1 becomes the new output dimension : ex : 7*7 feature map convolution witha 3*3 kernel : 7 -3 + 1 = 5*5 output dimension
     SAME,           //Preserves the input dimension
+    FULL            //Extends the input dimension
 } padding_t;
 
 
@@ -90,22 +91,23 @@ void print_tensor4_mask(const uint8_t *mask, const tensor4_t *A);
 //----------------------------------//            
 //---         Operation          ---//
 //----------------------------------//
+//Generic convolution function
+//void convbuffer(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right);
 
-//2D elementary convolution
-void conv(
-float *im, size_t im_cols, size_t im_rows,
-float *kernel, size_t k_cols, size_t k_rows,
-float *conv_result, size_t c_cols, size_t c_rows,
-padding_t type);
+
+
+void conv(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding);
+
 
 //X is the input, K the parameters, type padding type and Z the output parameter
-void conv_cumulate(const tensor4_t *X, const tensor4_t *K, const padding_t type, tensor4_t **Z);
+//void conv_cumulate(const tensor4_t *X, const tensor4_t *K, const padding_t type, tensor4_t **Z);
 
 //Adds constants to the maps, on the shape[2] Axis
-void addBias(tensor4_t *t, const float *b);
+void addBias(tensor4_t *t, const float *b);                     //<--REWORK ?
 
 //Performs ReLU
-void ReLU(float *tab, size_t size);
+//void ReLU(float *tab, size_t size);
+void ReLU(tensor4_t *T);
 
 //Adds biais for a float buffer
 void addBias_buffer(float *buffer, const float *b, size_t size);
@@ -119,9 +121,8 @@ void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask);
 //Performs the multiplication of W*X
 void matvec(const float *X, const tensor4_t *W, float **Z);
 
-void convNew(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z,
-          size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right);
+void convNew(const tensor4_t *X, const tensor4_t *K, const float b, tensor4_t **Z, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right);
+
 
 //Wrappers
-void conv_SAME();
 #endif

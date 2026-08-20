@@ -99,15 +99,15 @@ int main(){
     print_tensor4_data(X);
     print_tensor4_data(K);
     
-    convNew(X,K,&Z,0,0,0,0);
+    convNew(X,K,0.0f,&Z,0,0,0,0);
     print_tensor4_data(Z);
 
 
-    convNew(X,K,&Z,1,1,1,1);
-    print_tensor4_data(Z);
+    //convNew(X,K,&Z,1,1,1,1);
+    //print_tensor4_data(Z);
 
-    convNew(X,K,&Z,2,2,2,2);
-    print_tensor4_data(Z);
+    //convNew(X,K,&Z,2,2,2,2);
+    //print_tensor4_data(Z);
 
 
 
@@ -120,6 +120,8 @@ int main(){
 
     convNew(X,K,&Z,1,1,1,1);
     print_tensor4_data(Z); */
+
+    printf("%i\n",(int)((size_t)6 - (size_t)12));
 
     return 0;
 }

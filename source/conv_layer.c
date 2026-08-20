@@ -51,26 +51,26 @@ void forward(ConvLayer *l, const tensor4_t *X){
     //--->  TIME METRICS
     //double start = omp_get_wtime();
     
-    conv_cumulate(X,l->K,l->padding_type,&l->A);
+    //conv_cumulate(X,l->K,l->padding_type,&l->A);
     
     
 
     
-    addBias(l->A,l->b);
+    //addBias(l->A,l->b);
     //printf("\n\n Valeur post biais : \n\n");
     //print_tensor4_data(l->A);
 
 
-    ReLU(l->A->datas,l->A->flatten_size);
+    //ReLU(l->A->datas,l->A->flatten_size);
     //printf("\n\n Valeur post ReLU : \n\n");
     //print_tensor4_data(l->A);
     
-    MaxPool(l->A,&l->P,&l->Pooling_Mask);
+    //MaxPool(l->A,&l->P,&l->Pooling_Mask);
     //printf("\n\n  Valeur post Pooling : \n\n");
     //print_tensor4_data(l->P);
     
     //printf("\n\n  Valeur masque pooling : \n\n");
-    print_tensor4_mask(l->Pooling_Mask, l->A);
+    //print_tensor4_mask(l->Pooling_Mask, l->A);
     //printf("\n\n<--- CONV RESULT --->\n\n");
     //print_tensor4_data(l->A);
     

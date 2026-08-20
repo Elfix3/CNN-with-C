@@ -14,7 +14,7 @@ DenseLayer *init_dense(size_t n, size_t m, activation_t type){
 void forward_dense(DenseLayer *l, const float *X){
     //Important assomption : X must be allocated with the same dimension as W->shape[0]
     
-    l->X = X;
+    /* l->X = X;
     
     matvec(X,l->W,&l->A);
     
@@ -25,5 +25,5 @@ void forward_dense(DenseLayer *l, const float *X){
         ReLU(l->A,l->W->shape[1]);
     } else if(l->activation_type == SOFTMAX){
         SoftMax(l->A,l->W->shape[1]);
-    }
+    } */
 }
