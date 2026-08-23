@@ -18,6 +18,7 @@
 #define         MAX(A,B)                    (((A)>=(B)) ? (A) : (B) )
 #define         MAX4(A,B,C,D)               MAX((MAX((A),(B))),MAX((C),(D)))
 
+#define         MIN(A,B)                    (((A)<(B)) ? (A) : (B) )
 
 //Defines the way to Initiates a tensor4
 typedef enum{
@@ -121,7 +122,10 @@ void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask);
 //Performs the multiplication of W*X
 void matvec(const float *X, const tensor4_t *W, float **Z);
 
+void convOld(const tensor4_t *X, const tensor4_t *K, const float b, tensor4_t **Z, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right);
+
 void convNew(const tensor4_t *X, const tensor4_t *K, const float b, tensor4_t **Z, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right);
+
 
 
 //Wrappers

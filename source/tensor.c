@@ -328,7 +328,7 @@ static size_t get_conv_dim(const tensor4_t *X, const tensor4_t *K, uint8_t axis,
 }
 
 
-void conv(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding){
+void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding){
     assert(X != NULL && "Error conv_cumulate : NULL X parameter");
     assert(K != NULL && "Error during conv cumulate : NULL K");
     assert(Z != NULL && "Error during conv cumulate : NULL Z");
@@ -367,7 +367,15 @@ void conv(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t paddi
         (*Z) = (tensor4_t*)init_tensor4(Z_cols, Z_rows, Z_fmaps, Z_batch, NOFILL);
     }
 
+    //for each batche example
+    for(size_t b = 0; b<X->shape[3]; b++){
+        //for each filter
+        for(size_t f = 0; f < K->shape[2]; f++){
+            
+            //Convolution puis cumul
+        }
 
+    }
     //Pour chaque image du batch
         //Pour chaque filtre
             //mon accumulateur
@@ -375,6 +383,12 @@ void conv(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t paddi
                 //---> Convolution du Kernel par l'input
                 //---> Cumul dans mon accumulateur
 }
+
+
+
+//######################################
+//######## TRAVAIL TEMPORAIRE #########
+//######################################
 
 /* void conv_cumulate(const tensor4_t *X, const tensor4_t *K, const padding_t type, tensor4_t **Z)
 {
@@ -452,6 +466,7 @@ void conv(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t paddi
 
 
 
+
 //modify this to have tensor X as input
 void matvec(const float *X, const tensor4_t *W, float **Z){
     //W is size(m,n), X is size(n,1) => Z is size 
@@ -473,7 +488,8 @@ void matvec(const float *X, const tensor4_t *W, float **Z){
     }
 }
 
-void convNew(const tensor4_t *X, const tensor4_t *K, const float b, tensor4_t **Z, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right){
+void convOld(const tensor4_t *X, const tensor4_t *K, const float b, tensor4_t **Z, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right){
+    //size
     //size
     size_t Z_Cols = X->shape[0]-K->shape[0] + 1 + pad_left + pad_right;
     size_t Z_Rows = X->shape[1]-K->shape[1] + 1 + pad_top + pad_bottom;
@@ -509,3 +525,51 @@ void convNew(const tensor4_t *X, const tensor4_t *K, const float b, tensor4_t **
 }
 
 
+
+
+ //Doit être une conv intermédiaire
+void convNew(const tensor4_t *X, const tensor4_t *K, const float b, tensor4_t **Z, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right){
+    //size
+    size_t Z_Cols = X->shape[0]-K->shape[0] + 1 + pad_left + pad_right;
+    size_t Z_Rows = X->shape[1]-K->shape[1] + 1 + pad_top + pad_bottom;
+
+    (*Z) = (tensor4_t*)init_tensor4(Z_Cols,Z_Rows,1,1,NOFILL);
+    if(*Z == NULL){
+        fprintf(stderr, "Error, output conv Z badalloc");
+    }
+
+
+    //Whatever go my #pragma OMP for
+    for(size_t rZ = 0; rZ < (*Z)->shape[1]; rZ++){
+        int rKlow =  pad_top - rZ; 
+        int rKhigh = pad_top - rZ + X->shape[1];
+        size_t rKStart = MAX(0,rKlow);
+        size_t rKEnd   = MIN(K->shape[1], rKhigh);       
+
+        for(size_t cZ = 0; cZ < (*Z)->shape[0]; cZ++){
+        
+            int cKlow =  pad_left - cZ; 
+            int cKhigh = pad_left - cZ + X->shape[0];
+            size_t cKStart = MAX(0,cKlow);
+            size_t cKEnd   = MIN(K->shape[0], cKhigh);  
+            
+            
+            float acc = 0.0f;
+
+            for(int rK = rKStart; rK < rKEnd; rK++){
+                size_t rX = rK + rZ - pad_top;
+                for(int cK = cKStart; cK < cKEnd ; cK++){
+                    //printf("%i : %i\n", cK,rK);
+                    size_t cX = cK + cZ - pad_left;
+                    
+                    
+                   acc += get_t4_val(K,cK,rK,0,0)* get_t4_val(X,cX,rX,0,0);
+                }
+                //printf("%.2f\n",acc);
+            }
+            //---> Ajout biais
+            set_t4_val((*Z),acc,cZ,rZ,0,0);
+        }
+    }
+
+}

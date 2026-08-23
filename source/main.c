@@ -1,5 +1,7 @@
 #include "stdio.h"
 #include "time.h"
+#include "omp.h"
+
 
 #define         FAN_IN              (3*3*4)
 #define         MAX(A,B)            (((A)>=(B)) ? (A) : (B) )
@@ -93,15 +95,24 @@ int main(){
     //-----     TEST FOR NEWCONV      -----//
     //-------------------------------------//
     
-    tensor4_t *X = init_tensor4(5,5,1,1, UNIFORM);
-    tensor4_t *K = init_tensor4(3,3,1,1,UNIFORM);
+    tensor4_t *X = init_tensor4(1000,1000,1,1, UNIFORM);
+    tensor4_t *K = init_tensor4(100,100,1,1,UNIFORM);
     tensor4_t *Z;
-    print_tensor4_data(X);
-    print_tensor4_data(K);
+    tensor4_t *ZZ;
+    //print_tensor4_data(X);
+    //print_tensor4_data(K);
     
-    convNew(X,K,0.0f,&Z,0,0,0,0);
-    print_tensor4_data(Z);
-
+    double start = omp_get_wtime();
+    convOld(X,K,0.0f,&Z,1,1,1,1);
+    double end = omp_get_wtime();
+    printf("Time diff : %.7f\n",end-start);
+    //print_tensor4_data(Z);
+    
+    start = omp_get_wtime();
+    convNew(X,K,0.0f,&ZZ,1,1,1,1);
+    end = omp_get_wtime();
+    printf("Time diff : %.7f\n",end-start);
+    //print_tensor4_data(ZZ);
 
     //convNew(X,K,&Z,1,1,1,1);
     //print_tensor4_data(Z);
@@ -121,7 +132,7 @@ int main(){
     convNew(X,K,&Z,1,1,1,1);
     print_tensor4_data(Z); */
 
-    printf("%i\n",(int)((size_t)6 - (size_t)12));
+    //printf("%i\n",(int)((size_t)6 - (size_t)12));
 
     return 0;
 }
