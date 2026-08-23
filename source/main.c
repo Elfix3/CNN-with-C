@@ -95,23 +95,33 @@ int main(){
     //-----     TEST FOR NEWCONV      -----//
     //-------------------------------------//
     
-    tensor4_t *X = init_tensor4(1000,1000,1,1, UNIFORM);
-    tensor4_t *K = init_tensor4(100,100,1,1,UNIFORM);
+    tensor4_t *X = init_tensor4(4,4,1,1, UNIFORM);
+    tensor4_t *K = init_tensor4(2,2,1,1,UNIFORM);
     tensor4_t *Z;
-    tensor4_t *ZZ;
-    //print_tensor4_data(X);
+    allocZ(X,K,&Z,SAME);
+    //tensor4_t *ZZ;
+    print_tensor4_data(X);
     //print_tensor4_data(K);
     
     double start = omp_get_wtime();
-    convOld(X,K,0.0f,&Z,1,1,1,1);
+
+    
+    convBuffer(X,X->datas,
+                K, K->datas,
+                0.1f,
+                Z,Z->datas,
+                1,0,1,0);
+
+
     double end = omp_get_wtime();
-    printf("Time diff : %.7f\n",end-start);
+    //printf("Time diff : %.7f\n",end-start);
     //print_tensor4_data(Z);
     
-    start = omp_get_wtime();
-    convNew(X,K,0.0f,&ZZ,1,1,1,1);
-    end = omp_get_wtime();
-    printf("Time diff : %.7f\n",end-start);
+    tensor4_t *PoolX  = NULL;
+    uint8_t *Pmask = NULL;
+    MaxPool(X,&PoolX,&Pmask);
+    print_tensor4_data(PoolX);
+    
     //print_tensor4_data(ZZ);
 
     //convNew(X,K,&Z,1,1,1,1);

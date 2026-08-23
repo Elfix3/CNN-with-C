@@ -97,7 +97,7 @@ void print_tensor4_mask(const uint8_t *mask, const tensor4_t *A);
 
 
 
-void conv(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding);
+void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding);
 
 
 //X is the input, K the parameters, type padding type and Z the output parameter
@@ -110,9 +110,6 @@ void addBias(tensor4_t *t, const float *b);                     //<--REWORK ?
 //void ReLU(float *tab, size_t size);
 void ReLU(tensor4_t *T);
 
-//Adds biais for a float buffer
-void addBias_buffer(float *buffer, const float *b, size_t size);
-
 //Performs Softmax
 void SoftMax(float *tab, size_t size);
 
@@ -122,10 +119,14 @@ void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask);
 //Performs the multiplication of W*X
 void matvec(const float *X, const tensor4_t *W, float **Z);
 
-void convOld(const tensor4_t *X, const tensor4_t *K, const float b, tensor4_t **Z, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right);
+void outputConv(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding);
 
-void convNew(const tensor4_t *X, const tensor4_t *K, const float b, tensor4_t **Z, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right);
 
+void convBuffer(const tensor4_t *X, const float *dataX,
+                const tensor4_t *K, const float *dataK,
+                const float b,
+                const tensor4_t *Z, float *dataZ,
+                size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right);
 
 
 //Wrappers

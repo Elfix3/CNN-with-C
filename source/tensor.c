@@ -64,7 +64,6 @@ tensor4_t *init_tensor4(size_t d0, size_t d1, size_t d2, size_t d3, distribution
         break;
 
     }
-
     return t;
 }
 
@@ -128,16 +127,7 @@ void ReLU(tensor4_t *T){
     }
 }
 
-// bof bof
-void addBias_buffer(float *buffer, const float *b, size_t size){
-    
-    assert(buffer != NULL && "Error Null ptr buffer");
-    assert(b != NULL && "Error Null ptr bias");
 
-    for(size_t i = 0; i<size; i++){
-        buffer[i] += b[i];
-    }
-}
 
 void SoftMax(float *tab, size_t size){
 
@@ -163,7 +153,6 @@ void SoftMax(float *tab, size_t size){
 void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask){
     assert(A != NULL);
 
-
     //Checks if P needs allocation
     uint8_t needs_realloc = (*P) == NULL || (*P)->shape[0] != (A->shape[0]+1)/2 ||            
     (*P)->shape[1] != (A->shape[1]+1)/2 || (*P)->shape[2] != A->shape[2] || (*P)->shape[3] != A->shape[3];
@@ -180,8 +169,9 @@ void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask){
 
     size_t store_index = 0;    
 
+
+    // ON DOIT ITERER SUR LE BATCH !!
     //for each image
-    
 
     //foreach FEATURE MAP NOT IMAGE
     for(size_t idx_im = 0; idx_im <A->strides[3]; idx_im+= A->strides[2]){
@@ -237,94 +227,35 @@ void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask){
 
 
 
-
-void addBias(tensor4_t *t, const float *b){
-    //We assume b is n_feature map === shape[2] sized.
-    assert(b != NULL && "Error Null ptr bias");
-    assert(t != NULL && "Error Null tensor");
-    assert(t->shape[3] == 1 && "Error, wrong tensor shape for addbias, only one filter");
+void outputConv(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding){
     
-    size_t idx_image;
-    size_t img_size;
-
-    for(size_t i = 0; i<t->shape[2]; i++){
-        idx_image = get_t4_idx(t,0,0,i,0);
-        img_size = (t->shape[0]*t->shape[1]);
-        for(size_t j = idx_image; j< (idx_image + img_size) ; j++){
-            t->datas[j] += b[i];
-        }
+    if(*(Z) != NULL){
+        LOG("Output tensor Z already allocated");
     }
-}
-
-//should use tensor4_t
-/* void conv(      float *im, size_t im_cols, size_t im_rows,
-                float *kernel, size_t k_cols, size_t k_rows,
-                float *conv_result, size_t c_cols, size_t c_rows,
-                padding_t type)
-{
-    assert(im != NULL && kernel != NULL && "Error image or kernel is NULL");
     
-    memset(conv_result, 0, c_cols*c_rows*sizeof(float));
-    
-    switch (type){
-    
-    case SAME:
-        
-        for(size_t i = 0; i<c_cols*c_rows;i++){
-            
-            int x = i/c_cols;   //row number
-            int y = i%c_cols;   //col number
+    size_t Z_cols, Z_rows;
 
-            for(size_t k = 0; k <k_cols*k_rows; k++){
-                int kx = k/k_cols- k_rows/2;   //row number difference
-                int ky = k%k_cols- k_cols/2;   //col number difference
+    switch (padding){
+    case SAME :
+        Z_cols = X->shape[0];
+        Z_rows = X->shape[1]; 
+    break;
+    case VALID :
+        assert(X->shape[0] >= K->shape[0] &&"Error, kernel too wide for a VALID conv");
+        assert(X->shape[1] >= K->shape[1] && "Error, kernel too long for a VALID conv");
+        Z_cols = X->shape[0] - K->shape[0] + 1;
+        Z_rows = X->shape[1] - K->shape[1] + 1;
+    break;
+    case FULL :
+        Z_cols = X->shape[0] + K->shape[0] - 1;
+        Z_rows = X->shape[1] + K->shape[1] - 1;
+    break;
 
-                short isOutbound = ((int)(x+kx) < 0) || ((int)(y+ky) < 0) || ((int)(x+kx) >= (int)c_rows) || ((int)(y+ky) >= (int)c_cols); 
-                conv_result[i] += kernel[k]*(isOutbound ? 0.0f : im[y+ky + (x+kx)*c_cols]);
-            }
-            
-        }
-
-        break;
-
-    case VALID:
-
-        //#pragma omp parallel for
-        for(size_t i = 0; i<c_cols*c_rows;i++){
-            int x = i/c_cols;   //row number
-            int y = i%c_cols;   //col number
-            
-            for(size_t k = 0; k<k_cols*k_rows; k++){
-
-                int kx = k/k_cols;   //row number
-                int ky = k%k_cols;   //col number   
-
-                conv_result[i] +=kernel[k]*im[(x+kx)*im_cols + (y+ky)];
-            }
-        
-        }
-
-        break;
-
-    default :
+    default:
+        assert(0 && "Error: invalid padding mode");
         break;
     }
-
-} */
-
-static void cumulate(float *acc, float *source, size_t cumulate_size){
-    for(size_t i = 0; i< cumulate_size; i++){
-        acc[i] += source[i];
-    }
-}
-
-
-
-
-static size_t get_conv_dim(const tensor4_t *X, const tensor4_t *K, uint8_t axis, padding_t type){
-    assert(axis < 2 && "Error : axis must be 0 (cols) or 1 (rows)");
-    assert(K->shape[axis] <= X->shape[axis] && "Error : kernel bigger than input on this axis");
-    return  ((type == VALID) ? (X->shape[0]- K->shape[0] + 1) : X->shape[0]);
+    (*Z) = (tensor4_t*)init_tensor4(Z_cols,Z_rows,1,1,NOFILL);
 }
 
 
@@ -339,20 +270,18 @@ void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padd
     size_t Z_fmaps = K->shape[3];       //Is the number of filter in K
     size_t Z_batch = X->shape[3];
 
+    //Put this in a helper function ??
     switch (padding){
-    
     case SAME :
         Z_cols = X->shape[0];
         Z_rows = X->shape[1]; 
     break;
-    
     case VALID :
         assert(X->shape[0] >= K->shape[0] &&"Error, kernel too wide for a VALID conv");
         assert(X->shape[1] >= K->shape[1] && "Error, kernel too long for a VALID conv");
         Z_cols = X->shape[0] - K->shape[0] + 1;
         Z_rows = X->shape[1] - K->shape[1] + 1;
     break;
-
     case FULL :
         Z_cols = X->shape[0] + K->shape[0] - 1;
         Z_rows = X->shape[1] + K->shape[1] - 1;
@@ -363,6 +292,7 @@ void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padd
         break;
     }
 
+    //Allocation of each 
     if((*Z) == NULL){
         (*Z) = (tensor4_t*)init_tensor4(Z_cols, Z_rows, Z_fmaps, Z_batch, NOFILL);
     }
@@ -488,87 +418,74 @@ void matvec(const float *X, const tensor4_t *W, float **Z){
     }
 }
 
-void convOld(const tensor4_t *X, const tensor4_t *K, const float b, tensor4_t **Z, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right){
-    //size
-    //size
-    size_t Z_Cols = X->shape[0]-K->shape[0] + 1 + pad_left + pad_right;
-    size_t Z_Rows = X->shape[1]-K->shape[1] + 1 + pad_top + pad_bottom;
-
-    (*Z) = (tensor4_t*)init_tensor4(Z_Cols,Z_Rows,1,1,NOFILL);
-    if(*Z == NULL){
-        fprintf(stderr, "Error, output conv Z badalloc");
+void allocZ(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding){
+    
+    if(*(Z) != NULL){
+        LOG("Output tensor Z already allocated");
     }
 
+    size_t Z_cols, Z_rows;
 
-    //Whatever go my #pragma OMP for
-    for(size_t rZ = 0; rZ < (*Z)->shape[1]; rZ++){
-        for(size_t cZ = 0; cZ < (*Z)->shape[0]; cZ++){
-            
-            float acc = 0.0f;
-            for(size_t rK = 0; rK < K->shape[1]; rK++){
-                for(size_t cK = 0; cK < K->shape[0]; cK++){
-                    
-                    int cX = cK + cZ - pad_left;
-                    int rX = rK + rZ - pad_top;
-                    //coûteux... on accède juste pas aux K qui sortent ?
-                    short isOutBound = (cX < 0) ||(rX <0) || (cX > (int)X->shape[0]-1) ||(rX > (int)X->shape[1]-1); //upper bound check as well
-                    acc += get_t4_val(K,cK,rK,0,0)*(isOutBound ? 0.0f : get_t4_val(X,cX,rX,0,0));
-                    //printf("%.2f\n", get_t4_val(K,cK,rK,0,0));
-                }
-                //printf("%.2f\n",acc);
-            }
-            //---> Ajout biais
-            set_t4_val((*Z),acc,cZ,rZ,0,0);
-        }
+    switch (padding){
+    case SAME :
+        Z_cols = X->shape[0];
+        Z_rows = X->shape[1]; 
+    break;
+    case VALID :
+        assert(X->shape[0] >= K->shape[0] &&"Error, kernel too wide for a VALID conv");
+        assert(X->shape[1] >= K->shape[1] && "Error, kernel too long for a VALID conv");
+        Z_cols = X->shape[0] - K->shape[0] + 1;
+        Z_rows = X->shape[1] - K->shape[1] + 1;
+    break;
+    case FULL :
+        Z_cols = X->shape[0] + K->shape[0] - 1;
+        Z_rows = X->shape[1] + K->shape[1] - 1;
+    break;
+
+    default:
+        assert(0 && "Error: invalid padding mode");
+        break;
     }
-
+    (*Z) = (tensor4_t*)init_tensor4(Z_cols,Z_rows,1,1,NOFILL);
 }
 
-
-
-
  //Doit être une conv intermédiaire
-void convNew(const tensor4_t *X, const tensor4_t *K, const float b, tensor4_t **Z, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right){
-    //size
-    size_t Z_Cols = X->shape[0]-K->shape[0] + 1 + pad_left + pad_right;
-    size_t Z_Rows = X->shape[1]-K->shape[1] + 1 + pad_top + pad_bottom;
+void convBuffer(const tensor4_t *X, const float *dataX, const tensor4_t *K, const float *dataK, const float b, const tensor4_t *Z, float *dataZ, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right){
 
-    (*Z) = (tensor4_t*)init_tensor4(Z_Cols,Z_Rows,1,1,NOFILL);
-    if(*Z == NULL){
+    //TENSOR Z ALREADY ALLOCATED
+    if(Z == NULL){
         fprintf(stderr, "Error, output conv Z badalloc");
     }
 
-
-    //Whatever go my #pragma OMP for
-    for(size_t rZ = 0; rZ < (*Z)->shape[1]; rZ++){
+    for(size_t rZ = 0; rZ < Z->shape[1]; rZ++){
         int rKlow =  pad_top - rZ; 
         int rKhigh = pad_top - rZ + X->shape[1];
         size_t rKStart = MAX(0,rKlow);
-        size_t rKEnd   = MIN(K->shape[1], rKhigh);       
+        size_t rKEnd   = MIN(K->shape[1],(size_t)MAX(0, rKhigh));       
 
-        for(size_t cZ = 0; cZ < (*Z)->shape[0]; cZ++){
+        for(size_t cZ = 0; cZ < Z->shape[0]; cZ++){
         
             int cKlow =  pad_left - cZ; 
             int cKhigh = pad_left - cZ + X->shape[0];
             size_t cKStart = MAX(0,cKlow);
-            size_t cKEnd   = MIN(K->shape[0], cKhigh);  
+            size_t cKEnd   = MIN(K->shape[0], (size_t)MAX(0, cKhigh));  
             
             
             float acc = 0.0f;
 
-            for(int rK = rKStart; rK < rKEnd; rK++){
+            for(size_t rK = rKStart; rK < rKEnd; rK++){
                 size_t rX = rK + rZ - pad_top;
-                for(int cK = cKStart; cK < cKEnd ; cK++){
-                    //printf("%i : %i\n", cK,rK);
+                for(size_t cK = cKStart; cK < cKEnd ; cK++){
                     size_t cX = cK + cZ - pad_left;
                     
-                    
-                   acc += get_t4_val(K,cK,rK,0,0)* get_t4_val(X,cX,rX,0,0);
+                    //Optimiser les accès
+                    //acc += get_t4_val(K,cK,rK,0,0)* get_t4_val(X,cX,rX,0,0);
+                    acc +=dataK[cK+ rK*K->strides[1]]*dataX[cX + rX*X->strides[1]];
                 }
-                //printf("%.2f\n",acc);
             }
-            //---> Ajout biais
-            set_t4_val((*Z),acc,cZ,rZ,0,0);
+            dataZ[cZ + rZ*Z->strides[1]] += acc+b;
+            
+            
         }
     }
 
