@@ -35,6 +35,29 @@ typedef enum{
 } padding_t;
 
 
+typedef struct{
+    size_t col;
+    size_t row;
+    size_t nmap;
+    size_t nbatch;  //<----------- IS A NUMBER OF FILTER FOR A KERNEL K
+} dimensions;
+
+typedef union{
+    struct{
+        size_t col;
+        size_t row;
+        size_t nmap;
+        size_t nbatch;
+    };
+
+
+    struct{
+
+    };
+
+    size_t shape[4];
+} tensor_shape_t;
+
 //Tensor 4 used for : Kernels representation (All)
 
 //----------------------------------//             
@@ -121,6 +144,7 @@ void matvec(const float *X, const tensor4_t *W, float **Z);
 
 void outputConv(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding);
 
+void getPadding(size_t *t, size_t *b, size_t *l, size_t *r, const tensor4_t *K, padding_t padding);
 
 void convBuffer(const tensor4_t *X, const float *dataX,
                 const tensor4_t *K, const float *dataK,

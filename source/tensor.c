@@ -258,6 +258,22 @@ void outputConv(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t
     (*Z) = (tensor4_t*)init_tensor4(Z_cols,Z_rows,1,1,NOFILL);
 }
 
+void getPadding(size_t *t, size_t *b, size_t *l, size_t *r, const tensor4_t *K, padding_t padding){
+    switch (padding){
+        
+    case VALID :
+        *t = 0; *b = 0; *l = 0; *r = 0;
+        break;
+    case SAME :
+        //manage odd parity for kernel should be something like K->row/2  and other same (K->row-1)/2
+
+        //I GUESS VRO
+    case FULL :
+        *t = K->shape[1]-1; *b = K->shape[1]-1; *l = K->shape[0]-1; *r = K->shape[0]-1;
+    default:
+        break;
+    }
+}
 
 void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding){
     assert(X != NULL && "Error conv_cumulate : NULL X parameter");
@@ -265,46 +281,21 @@ void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padd
     assert(Z != NULL && "Error during conv cumulate : NULL Z");
 
 
-    size_t Z_cols;
-    size_t Z_rows;
-    size_t Z_fmaps = K->shape[3];       //Is the number of filter in K
-    size_t Z_batch = X->shape[3];
+    size_t pad_top, pad_bottom, pad_left, pad_right;
 
-    //Put this in a helper function ??
-    switch (padding){
-    case SAME :
-        Z_cols = X->shape[0];
-        Z_rows = X->shape[1]; 
-    break;
-    case VALID :
-        assert(X->shape[0] >= K->shape[0] &&"Error, kernel too wide for a VALID conv");
-        assert(X->shape[1] >= K->shape[1] && "Error, kernel too long for a VALID conv");
-        Z_cols = X->shape[0] - K->shape[0] + 1;
-        Z_rows = X->shape[1] - K->shape[1] + 1;
-    break;
-    case FULL :
-        Z_cols = X->shape[0] + K->shape[0] - 1;
-        Z_rows = X->shape[1] + K->shape[1] - 1;
-    break;
-
-    default:
-        assert(0 && "Error: invalid padding mode");
-        break;
-    }
-
-    //Allocation of each 
-    if((*Z) == NULL){
-        (*Z) = (tensor4_t*)init_tensor4(Z_cols, Z_rows, Z_fmaps, Z_batch, NOFILL);
-    }
+    allocZ(X,K,&Z,padding);
 
     //for each batche example
+    size_t idxBatch = 0;
+    size_t idxFilter= 0;
+
     for(size_t b = 0; b<X->shape[3]; b++){
         //for each filter
         for(size_t f = 0; f < K->shape[2]; f++){
             
             //Convolution puis cumul
         }
-
+        idxBatch += 0;
     }
     //Pour chaque image du batch
         //Pour chaque filtre
@@ -446,7 +437,7 @@ void allocZ(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t pad
         assert(0 && "Error: invalid padding mode");
         break;
     }
-    (*Z) = (tensor4_t*)init_tensor4(Z_cols,Z_rows,1,1,NOFILL);
+    (*Z) = (tensor4_t*)init_tensor4(Z_cols,Z_rows,K->shape[3],X->shape[3],NOFILL);
 }
 
  //Doit être une conv intermédiaire
