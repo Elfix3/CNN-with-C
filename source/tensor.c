@@ -31,12 +31,13 @@ tensor4_t *init_tensor4(size_t d0, size_t d1, size_t d2, size_t d3, distribution
     t->flatten_size = d0*d1*d2*d3;
     t->datas= (float*)malloc(sizeof(float)*t->flatten_size);
 
-    t->shape[0] = d0;           //Cols
-    t->shape[1] = d1;           //Rows
-    t->shape[2] = d2;           //Number of feature maps
-    t->shape[3] = d3;           //Number of filters
+    //Dimensions
+    t->col = d0;
+    t->row = d1;
+    t->nmap = d2;
+    t->nbatch = d3;         //<---For a Kernel or parameter tensor, nbatch actually represents the number of filter instead
 
-
+    //Strides
     t->strides[0] = 1;
     t->strides[1] = d0;
     t->strides[2] = d0*d1;
@@ -77,7 +78,7 @@ void free_tensor4(tensor4_t **t){
 }
 
 void print_tensor4_shape(const tensor4_t *t){
-    printf("(%zu, %zu, %zu, %zu) : (Cols, Rows, Nfmap, Nfilter)\n",t->shape[0],t->shape[1],t->shape[2],t->shape[3]);
+    printf("(%zu, %zu, %zu, %zu) : (Cols, Rows, Nfmap, Nbatch/NFilter)\n",t->shape[0],t->shape[1],t->shape[2],t->shape[3]);
 }
 
 void print_tensor4_data(const tensor4_t *t){
@@ -283,7 +284,7 @@ void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padd
 
     size_t pad_top, pad_bottom, pad_left, pad_right;
 
-    allocZ(X,K,&Z,padding);
+    allocZ(X,K,Z,padding);
 
     //for each batche example
     size_t idxBatch = 0;
@@ -420,7 +421,8 @@ void allocZ(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t pad
     switch (padding){
     case SAME :
         Z_cols = X->shape[0];
-        Z_rows = X->shape[1]; 
+        Z_rows = X->shape[1];
+ 
     break;
     case VALID :
         assert(X->shape[0] >= K->shape[0] &&"Error, kernel too wide for a VALID conv");
@@ -437,11 +439,12 @@ void allocZ(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t pad
         assert(0 && "Error: invalid padding mode");
         break;
     }
+    printf("%zu %zu %zu %zu\n",Z_cols,Z_rows,K->nbatch,X->nbatch);
     (*Z) = (tensor4_t*)init_tensor4(Z_cols,Z_rows,K->shape[3],X->shape[3],NOFILL);
 }
 
  //Doit être une conv intermédiaire
-void convBuffer(const tensor4_t *X, const float *dataX, const tensor4_t *K, const float *dataK, const float b, const tensor4_t *Z, float *dataZ, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right){
+void convBuffer(const tensor4_t *X, const float *dataX, const tensor4_t *K, const float *dataK, const tensor4_t *Z, float *dataZ, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right){
 
     //TENSOR Z ALREADY ALLOCATED
     if(Z == NULL){
@@ -474,7 +477,7 @@ void convBuffer(const tensor4_t *X, const float *dataX, const tensor4_t *K, cons
                     acc +=dataK[cK+ rK*K->strides[1]]*dataX[cX + rX*X->strides[1]];
                 }
             }
-            dataZ[cZ + rZ*Z->strides[1]] += acc+b;
+            dataZ[cZ + rZ*Z->strides[1]] += acc;
             
             
         }

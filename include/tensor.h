@@ -35,7 +35,7 @@ typedef enum{
 } padding_t;
 
 
-typedef struct{
+/* typedef struct{
     size_t col;
     size_t row;
     size_t nmap;
@@ -56,7 +56,7 @@ typedef union{
     };
 
     size_t shape[4];
-} tensor_shape_t;
+} tensor_shape_t; */
 
 //Tensor 4 used for : Kernels representation (All)
 
@@ -64,14 +64,22 @@ typedef union{
 //---           TENSOR 4         ---//
 //----------------------------------//
 //Used for Storing Kernels, InputFeature maps X, Output of convolutions Z, output of ReLU A, and output of pooling P
-typedef struct{
+/* typedef struct{
     size_t flatten_size;
     size_t shape[4];            //Shape[0] = cols, Shape[1] = Rows, Shape[2] = N_feature_map, Shape[3] = N_filter
     size_t strides[4];
     float *datas;
+} tensor4_t; */
+
+typedef struct{
+    size_t flatten_size;
+    union {
+        struct{ size_t col; size_t row; size_t nmap; size_t nbatch;};       //<---For a Kernel or parameter tensor, nbatch actually represents the number of filter instead
+        size_t shape[4];
+    };
+    size_t strides[4];
+    float *datas;
 } tensor4_t;
-
-
 
 //----------------------------------//            
 //---       init and free        ---//
@@ -142,13 +150,14 @@ void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask);
 //Performs the multiplication of W*X
 void matvec(const float *X, const tensor4_t *W, float **Z);
 
+void allocZ(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding);
+
 void outputConv(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding);
 
 void getPadding(size_t *t, size_t *b, size_t *l, size_t *r, const tensor4_t *K, padding_t padding);
 
 void convBuffer(const tensor4_t *X, const float *dataX,
                 const tensor4_t *K, const float *dataK,
-                const float b,
                 const tensor4_t *Z, float *dataZ,
                 size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right);
 

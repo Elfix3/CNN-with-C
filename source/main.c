@@ -99,27 +99,27 @@ int main(){
     tensor4_t *K = init_tensor4(2,2,1,1,UNIFORM);
     tensor4_t *Z;
     allocZ(X,K,&Z,SAME);
+    
     //tensor4_t *ZZ;
     print_tensor4_data(X);
-    //print_tensor4_data(K);
+    print_tensor4_data(K);
     
-    double start = omp_get_wtime();
+    //double start = omp_get_wtime();
 
     
     convBuffer(X,X->datas,
                 K, K->datas,
-                0.1f,
                 Z,Z->datas,
                 1,0,1,0);
 
 
-    double end = omp_get_wtime();
+    //double end = omp_get_wtime();
     //printf("Time diff : %.7f\n",end-start);
-    //print_tensor4_data(Z);
+    print_tensor4_data(Z);
     
     tensor4_t *PoolX  = NULL;
     uint8_t *Pmask = NULL;
-    MaxPool(X,&PoolX,&Pmask);
+    MaxPool(Z,&PoolX,&Pmask);
     print_tensor4_data(PoolX);
     
     //print_tensor4_data(ZZ);
