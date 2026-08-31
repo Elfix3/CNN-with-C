@@ -127,7 +127,7 @@ void print_tensor4_mask(const uint8_t *mask, const tensor4_t *A);
 //void convbuffer(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right);
 
 
-
+//forward
 void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding);
 
 
