@@ -307,11 +307,11 @@ void getPadding(size_t *t, size_t *b, size_t *l, size_t *r, const tensor4_t *K, 
         *t = 0; *b = 0; *l = 0; *r = 0;
         break;
     case SAME :
-        //manage odd parity for kernel should be something like K->row/2  and other same (K->row-1)/2
-
-        //I GUESS VRO
+        *t = K->row/2;*b = (K->row-1)/2; *l = K->col/2; *r = (K->col-1)/2;
+        break;
     case FULL :
         *t = K->shape[1]-1; *b = K->shape[1]-1; *l = K->shape[0]-1; *r = K->shape[0]-1;
+        break;
     default:
         break;
     }

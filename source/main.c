@@ -163,11 +163,11 @@ int main(){
 
     tensor4_t *Z = NULL;                                //<---OUTPUT, should be 3*3*2*5
 
-    LOG("Tensor X :");
-    print_tensor4_data(X);
+    //LOG("Tensor X :");
+    //print_tensor4_data(X);
     LOG("Tensor K :");
     print_tensor4_data(K);
-    conv4(X,K,&Z,VALID);
+    /* conv4(X,K,&Z,VALID);
     
 
 
@@ -175,7 +175,16 @@ int main(){
     print_tensor4_shape(Z);
 
     LOG("Tensor Z :");
-    print_tensor4_data(Z);
+    print_tensor4_data(Z); */
+
+
+    //TODO calculer les offset en fonction du padding
+    size_t pad_top, pad_bottom, pad_left, pad_right;
+    getPadding(&pad_top, &pad_bottom, &pad_left, &pad_right,K,SAME);
+    LOG_DEBUG("%zu %zu %zu %zu",pad_top,pad_bottom, pad_left, pad_right);
+
+    
+    
     return 0;
 }
 
