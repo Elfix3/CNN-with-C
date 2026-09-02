@@ -214,19 +214,6 @@ void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask){
             }
         }
     }
-
-    /* t->shape[0] = (t->shape[0]+1)/2;
-    t->shape[1] = (t->shape[1]+1)/2;
-
-    t->strides[1] = t->shape[0];
-    t->strides[2] = t->shape[0]*t->shape[1];
-    t->strides[3] = t->shape[0]*t->shape[1]*t->shape[2];
-
-    t->flatten_size = t->strides[3];
-
-
-    t->datas = realloc(t->datas, sizeof(float)*t->flatten_size);
-    assert(t->datas != NULL && "[MaxPool] realloc failed"); */
 }
 
 

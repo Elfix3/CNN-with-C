@@ -21,7 +21,7 @@
 #define GRAY    "\033[90m"
 
 
-//Message générique de log
+//Message générique de log (pas utilisé hors développement)
 #define LOG(msg)                        printf("\n##### [%s] %s #####\n", __func__, msg)
 
 //---> DEBUG
@@ -42,25 +42,33 @@
 
 
 //---> WARNING
-#if DEBUG
-    
-#else
+#if WARNING
+    #define LOG_WARNING(fmt, ...) \
+        fprintf(stderr, YELLOW "[WARNING] %s:%d (%s): " fmt RESET "\n", \
+                __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 
+#else
+    #define LOG_WARNING(fmt, ...)
+    
 #endif
 
 
 //---> ERROR
-#if DEBUG
-    
+#if ERROR
+    #define LOG_ERROR(fmt, ...) \
+        fprintf(stderr, RED "[ERROR] %s:%d (%s): " fmt RESET "\n", \
+                __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 #else
-
+     #define LOG_ERROR(fmt, ...)
 #endif
 
 //---> VERBOSE
-#if DEBUG
-    
+#if VERBOSE
+    #define LOG_VERBOSE(fmt, ...) \
+        fprintf(stdout, GREEN "[VERBOSE] %s: " fmt RESET "\n", \
+                __func__, ##__VA_ARGS__)
 #else
-
+    #define LOG_VERBOSE(fmt, ...)
 #endif
 
 
