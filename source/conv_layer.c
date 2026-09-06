@@ -49,10 +49,17 @@ void forward(ConvLayer *l, const tensor4_t *X){
     assert(l->K->shape[2] == X->shape[2] && "[forward] : Error non matching input to the K-tensor");
 
     //--->  TIME METRICS
+    if(l->A == NULL){
+        
+    }
+    //Allouer l->Z
+    
+    
     //double start = omp_get_wtime();
     
-    //conv_cumulate(X,l->K,l->padding_type,&l->A);
     
+    //conv_cumulate(X,l->K,l->padding_type,&l->A);
+
     
 
     

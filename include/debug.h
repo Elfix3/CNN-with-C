@@ -72,4 +72,12 @@
 #endif
 
 
+#define REQUIRE(cond, fmt, ...) \
+    do { \
+        if (!(cond)) { \
+            LOG_ERROR(fmt, ##__VA_ARGS__); \
+            abort(); \
+        } \
+    } while (0)
+
 #endif //

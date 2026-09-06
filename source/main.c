@@ -13,7 +13,7 @@
 #include "tensor.h"
 #include "conv_layer.h"
 
-int main(){
+int main(int argc, char **argv){
     srand(time(NULL));
     
 
@@ -157,17 +157,17 @@ int main(){
     //-----     TEST FOR CONV4        -----//
     //-------------------------------------//
 
-    tensor4_t *X = init_tensor4(4,4,3,5, UNIFORM);      //<---INPUT
+    /* tensor4_t *X = init_tensor4(4,4,3,5, UNIFORM);      //<---INPUT
     tensor4_t *K = init_tensor4(4,4,3,2, UNIFORM);      //<---KERNELS
     
 
     tensor4_t *Z = NULL;                                //<---OUTPUT, should be 3*3*2*5
-
-    //LOG("Tensor X :");
-    //print_tensor4_data(X);
+    free_tensor4(&Z);
+    LOG("Tensor X :");
+    print_tensor4_data(X);
     LOG("Tensor K :");
     print_tensor4_data(K);
-    /* conv4(X,K,&Z,VALID);
+    conv4(X,K,&Z,FULL);
     
 
 
@@ -178,16 +178,20 @@ int main(){
     print_tensor4_data(Z); */
 
 
-    //TODO calculer les offset en fonction du padding
-    size_t pad_top, pad_bottom, pad_left, pad_right;
-    getPadding(&pad_top, &pad_bottom, &pad_left, &pad_right,K,FULL);
-    LOG_DEBUG("%zu %zu %zu %zu",pad_top,pad_bottom, pad_left, pad_right);
+    //-------------------------------------//
+    //-----     TEST FOR CONV4        -----//
+    //-------------------------------------//
+    tensor4_t *K = init_tensor4(3,3,3,2, UNIFORM);
+    LOG_INFO("K tensor :");
+    print_tensor4_data(K);
 
-    LOG_INFO("This is an Info %i",2);
-    LOG_WARNING("This is a warning");
-    LOG_ERROR("This is an error");
-    LOG_VERBOSE("I feel talkative");
+    tensor4_t *KFlip = NULL;    
     
+    kernelFlip(K,&KFlip);
+
+    
+    LOG_INFO("K flipped :");
+    print_tensor4_data(KFlip);
     
     return 0;
 }

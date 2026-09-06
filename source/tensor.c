@@ -21,29 +21,26 @@ static inline size_t maxindex4(float a, float b, float c, float d, size_t idxa,s
 
 //** Col, row, n_fmap, n_filter */
 tensor4_t *init_tensor4(size_t d0, size_t d1, size_t d2, size_t d3, distribution_t type){
-    assert(d0 != 0 &&
-            d1 != 0 &&
-            d2  != 0 &&
-            d3 != 0 && "Error, shapes must be >=1");
+ 
+    REQUIRE(d0 != 0 && d1 != 0 && d2 != 0 && d3 != 0,"Error, tensor 4 shape must be > 0");
     
-    
-    tensor4_t *t = (tensor4_t*)malloc(sizeof(tensor4_t));
-    t->flatten_size = d0*d1*d2*d3;
-    t->datas= (float*)malloc(sizeof(float)*t->flatten_size);
+    tensor4_t *T = (tensor4_t*)malloc(sizeof(tensor4_t));
+    T->flatten_size = d0*d1*d2*d3;
+    T->datas= (float*)malloc(sizeof(float)*T->flatten_size);
 
     //Dimensions
-    t->col = d0;
-    t->row = d1;
-    t->nmap = d2;
-    t->nbatch = d3;         //<---For a Kernel or parameter tensor, nbatch actually represents the number of filter instead
+    T->col = d0;
+    T->row = d1;
+    T->nmap = d2;
+    T->nbatch = d3;         //<---For a Kernel or parameter tensor, nbatch actually represents the number of filter instead
 
     //Strides
-    t->strides[0] = 1;
-    t->strides[1] = d0;
-    t->strides[2] = d0*d1;
-    t->strides[3] = d0*d1*d2;
+    T->strides[0] = 1;
+    T->strides[1] = d0;
+    T->strides[2] = d0*d1;
+    T->strides[3] = d0*d1*d2;
 
-    size_t fan_in = d0 * d1 *d2;
+    size_t fan_in = d0*d1*d2;
 
     switch (type)
     {
@@ -52,12 +49,12 @@ tensor4_t *init_tensor4(size_t d0, size_t d1, size_t d2, size_t d3, distribution
         break;
 
     case ZEROS:
-        memset(t->datas, 0, t->flatten_size * sizeof(float));
+        memset(T->datas, 0, T->flatten_size * sizeof(float));
         break;
     
     case UNIFORM :
-        for(size_t i = 0; i<t->flatten_size; i++){
-            t->datas[i] =  ((float)rand()/(float)RAND_MAX)*(float)2*HE_LIMIT(fan_in) - (float)HE_LIMIT(fan_in);
+        for(size_t i = 0; i<T->flatten_size; i++){
+            T->datas[i] =  ((float)rand()/(float)RAND_MAX)*(float)2*HE_LIMIT(fan_in) - (float)HE_LIMIT(fan_in);
         }
         break;
     
@@ -65,37 +62,43 @@ tensor4_t *init_tensor4(size_t d0, size_t d1, size_t d2, size_t d3, distribution
         break;
 
     }
-    return t;
+    
+    LOG_VERBOSE("Tensor successfully allocated with shapes (row, cols, nfmap, nbatch) : (%zu %zu %zu %zu)", T->col, T->row, T->nmap, T->nbatch);
+
+
+    return T;
 }
 
-void free_tensor4(tensor4_t **t){
-    if (t == NULL || *t == NULL) {
+void free_tensor4(tensor4_t **T){
+    if (T == NULL || *T == NULL) {
+        LOG_WARNING("Useless free tensor, target was already Null");
         return;
     }
-    free((*t)->datas);
-    free(*t);
-    *t = NULL;
+    free((*T)->datas);
+    free(*T);
+    *T = NULL;
 }
 
-void print_tensor4_shape(const tensor4_t *t){
-    printf("(%zu, %zu, %zu, %zu) : (Cols, Rows, Nfmap, Nbatch/NFilter)\n",t->shape[0],t->shape[1],t->shape[2],t->shape[3]);
+void print_tensor4_shape(const tensor4_t *T){
+    printf("(%zu, %zu, %zu, %zu) : (Cols, Rows, Nfmap, Nbatch/NFilter)\n",T->shape[0],T->shape[1],T->shape[2],T->shape[3]);
 }
 
-void print_tensor4_data(const tensor4_t *t){
+void print_tensor4_data(const tensor4_t *T){
     #if VERBOSE
-        print_tensor4_shape(t);
+        print_tensor4_shape(T);
     #endif
-    for(size_t i = 0; i<t->flatten_size; i++){
-        if(!(i%t->strides[1])){
+    
+    for(size_t i = 0; i<T->flatten_size; i++){
+        if(!(i%T->strides[1])){
             printf("\n");
         }
-        if((t->shape[3] != 1) && !(i%t->strides[3]) ){
-            printf("\n<--- Batch :  %zu --->\n",i/t->strides[3]);
+        if((T->nbatch != 1) && !(i%T->strides[3]) ){
+            printf("\n<--- Batch :  %zu --->\n",i/T->strides[3]);
         }
-        if((t->shape[2] != 1) && !(i%t->strides[2]) ){
-            printf("\nFeature map : %zu\n", ((i%t->strides[3])/t->strides[2]));
+        if((T->nmap != 1) && !(i%T->strides[2]) ){
+            printf("\nFeature map : %zu\n", ((i%T->strides[3])/T->strides[2]));
         }
-        printf("%.4f\t",t->datas[i]);
+        printf("%.4f\t",T->datas[i]);
     }
     printf("\n\n");
 }
@@ -124,8 +127,8 @@ void addBias(tensor4_t *t, const float *b){
 
 void ReLU(tensor4_t *T)
 {
-
-    assert(T != NULL && "Error Null ptr buffer");
+    //Throw some pragma tard
+    REQUIRE(T != NULL, "Input tensor is NULL");
     for(size_t i = 0; i<T->flatten_size; i++){
         if (T->datas[i] < 0.0f) {
             T->datas[i] = 0.0f;
@@ -217,40 +220,8 @@ void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask){
 }
 
 
-
-void outputConv(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding){
-    
-    if(*(Z) != NULL){
-        LOG("Output tensor Z already allocated");
-    }
-    
-    size_t Z_cols, Z_rows;
-
-    switch (padding){
-    case SAME :
-        Z_cols = X->shape[0];
-        Z_rows = X->shape[1]; 
-    break;
-    case VALID :
-        assert(X->shape[0] >= K->shape[0] &&"Error, kernel too wide for a VALID conv");
-        assert(X->shape[1] >= K->shape[1] && "Error, kernel too long for a VALID conv");
-        Z_cols = X->shape[0] - K->shape[0] + 1;
-        Z_rows = X->shape[1] - K->shape[1] + 1;
-    break;
-    case FULL :
-        Z_cols = X->shape[0] + K->shape[0] - 1;
-        Z_rows = X->shape[1] + K->shape[1] - 1;
-    break;
-
-    default:
-        assert(0 && "Error: invalid padding mode");
-        break;
-    }
-    (*Z) = (tensor4_t*)init_tensor4(Z_cols,Z_rows,1,1,NOFILL);
-}
-
-
-void allocZ(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding){
+//Still used ?
+/* void allocZ(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding){
     
     if(*(Z) == NULL){
         //LOG("Allocation of the tensor");
@@ -282,7 +253,53 @@ void allocZ(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t pad
         assert(0 && "Error: invalid padding mode");
         break;
     }
-    printf("%zu %zu %zu %zu\n",Z_cols,Z_rows,K->nbatch,X->nbatch);
+    //printf("%zu %zu %zu %zu\n",Z_cols,Z_rows,K->nbatch,X->nbatch);
+    (*Z) = (tensor4_t*)init_tensor4(Z_cols,Z_rows,K->shape[3],X->shape[3],ZEROS);
+} */
+
+
+void allocZ(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding){
+    //Bah ouaismais faut gérer les tenseurs déjà alloués
+    if(X == NULL){
+        LOG_ERROR("Input Tensor is NULL"); assert(0);
+    }
+    REQUIRE(X != NULL && K != NULL, "No");
+
+    if(*(Z) == NULL){
+        //LOG("Allocation of the tensor");
+        //mettre en verbose
+    } else {
+        return;                                 //Alloc only used one time
+    }
+
+    size_t Z_cols, Z_rows, Z_nmaps, Z_batch;
+
+    switch (padding){
+    case SAME :
+        Z_cols = X->shape[0];
+        Z_rows = X->shape[1];
+ 
+    break;
+    case VALID :
+        assert(X->shape[0] >= K->shape[0] &&"Error, kernel too wide for a VALID conv");
+        assert(X->shape[1] >= K->shape[1] && "Error, kernel too long for a VALID conv");
+        Z_cols = X->shape[0] - K->shape[0] + 1;
+        Z_rows = X->shape[1] - K->shape[1] + 1;
+    break;
+    case FULL :
+        Z_cols = X->shape[0] + K->shape[0] - 1;
+        Z_rows = X->shape[1] + K->shape[1] - 1;
+    break;
+
+    default:
+        assert(0 && "Error: invalid padding mode");
+        break;
+    }
+    Z_nmaps = K->nbatch;
+    Z_batch = X->nbatch;
+    //printf("%zu %zu %zu %zu\n",Z_cols,Z_rows,K->nbatch,X->nbatch);
+    
+    //Comparaison des dimensions --> nécessité d'allouer ?
     (*Z) = (tensor4_t*)init_tensor4(Z_cols,Z_rows,K->shape[3],X->shape[3],ZEROS);
 }
 
@@ -310,17 +327,23 @@ void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padd
     assert(Z != NULL && "Error during conv cumulate : NULL Z");
 
     //TODO calculer les offset en fonction du padding
+    
+    
     size_t pad_top, pad_bottom, pad_left, pad_right;
     getPadding(&pad_top, &pad_bottom, &pad_left, &pad_right,K,padding);
-    LOG_DEBUG("%zu %zu %zu %zu",pad_top,pad_bottom, pad_left, pad_right);
+    
+    
+    //LOG_DEBUG("%zu %zu %zu %zu",pad_top,pad_bottom, pad_left, pad_right);
     allocZ(X,K,Z,padding);
-    LOG_DEBUG("Z : stide : %zu",(*Z)->strides[2]);
+    //LOG_DEBUG("Z : stide : %zu",(*Z)->strides[2]);
 
     //for each batche example
     size_t idX = 0;
     size_t idK = 0;
     size_t idZ = 0;
 
+
+    //anti pattern pour du threading ?  oui
     size_t idxBatch = 0;
 
     //For each Batch
@@ -351,15 +374,46 @@ void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padd
         idX += X->strides[3];
         idxBatch += X->strides[3];
     }
-    //Pour chaque image du batch
-        //Pour chaque filtre
-            //mon accumulateur
-            //Pour chaque feature map
-                //---> Convolution du Kernel par l'input
-                //---> Cumul dans mon accumulateur
 }
 
+void kernelFlip(const tensor4_t *K, tensor4_t **Kflipped){
+    REQUIRE(K != NULL, "Cannot flipp NULL Kernel");
 
+    uint8_t needs_alloc  = 0;
+
+
+    if((*Kflipped) == NULL){
+        needs_alloc = 1;
+    } else if(K->col != (*Kflipped)->col || K->row != (*Kflipped)->row ||  K->nmap != (*Kflipped)->nmap || K->nbatch != (*Kflipped)->nbatch){
+        needs_alloc = 1;
+    }
+
+    if(needs_alloc){
+        LOG_VERBOSE("Tensor Kflip allocated");
+        (*Kflipped) = init_tensor4(K->col, K->row, K->nmap, K->nbatch,NOFILL);        
+    }
+    
+
+
+    size_t idK = 0;
+    //for each filter
+    for(size_t f = 0; f<K->nbatch; f++){
+
+        //for each featuremap
+        for(size_t m = 0; m <K->nmap; m++){
+            
+            //Flip operation
+            for(size_t i = 0; i< K->strides[2]; i++){
+                
+                (*Kflipped)->datas[idK+i] = K->datas[idK+K->strides[2]-i-1];
+                //printf("%.4f ",K->datas[idK+K->strides[2]-i-1]);
+                
+            }
+            //printf("\n ");
+            idK += K->strides[2];
+        }
+    }
+}
 
 //######################################
 //######## TRAVAIL TEMPORAIRE #########
@@ -469,10 +523,8 @@ void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padd
 void convBuffer(const tensor4_t *X, const float *dataX, const tensor4_t *K, const float *dataK, const tensor4_t *Z, float *dataZ, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right){
 
     //TENSOR Z ALREADY ALLOCATED
-    if(Z == NULL){
-        fprintf(stderr, "Error, output conv Z badalloc");
-    }
-    assert(X->nmap == K->nmap && "Error, input number of feature maps should match the number of feature maps inside a filter"); //<---- Here K->nbatch is the number of filter
+    REQUIRE(Z != NULL,"Z output of convBuffer not allocated");
+    REQUIRE(X->nmap == K->nmap, "Number of feature map in input must match number of feature map in kernel");
 
     for(size_t rZ = 0; rZ < Z->shape[1]; rZ++){
         int rKlow =  pad_top - rZ; 

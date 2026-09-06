@@ -35,42 +35,11 @@ typedef enum{
 } padding_t;
 
 
-/* typedef struct{
-    size_t col;
-    size_t row;
-    size_t nmap;
-    size_t nbatch;  //<----------- IS A NUMBER OF FILTER FOR A KERNEL K
-} dimensions;
-
-typedef union{
-    struct{
-        size_t col;
-        size_t row;
-        size_t nmap;
-        size_t nbatch;
-    };
-
-
-    struct{
-
-    };
-
-    size_t shape[4];
-} tensor_shape_t; */
-
 //Tensor 4 used for : Kernels representation (All)
 
 //----------------------------------//             
 //---           TENSOR 4         ---//
 //----------------------------------//
-//Used for Storing Kernels, InputFeature maps X, Output of convolutions Z, output of ReLU A, and output of pooling P
-/* typedef struct{
-    size_t flatten_size;
-    size_t shape[4];            //Shape[0] = cols, Shape[1] = Rows, Shape[2] = N_feature_map, Shape[3] = N_filter
-    size_t strides[4];
-    float *datas;
-} tensor4_t; */
-
 typedef struct{
     size_t flatten_size;
     union {
@@ -94,7 +63,7 @@ void free_tensor4(tensor4_t **t);
 //----------------------------------//            
 //---           Access           ---//
 //----------------------------------//
-
+//Access seem useless now
 
 //GERER LES ACCES INCORRECTS
 
@@ -114,8 +83,8 @@ t->datas[get_t4_idx(t,idx0,idx1,idx2,idx3)] = val;}
 //---           Display          ---//
 //----------------------------------//
 //Print infos on tensors
-void print_tensor4_shape(const tensor4_t *t);
-void print_tensor4_data(const tensor4_t *t);
+void print_tensor4_shape(const tensor4_t *T);
+void print_tensor4_data(const tensor4_t *T);
 void print_tensor4_mask(const uint8_t *mask, const tensor4_t *A);
 
 
@@ -127,9 +96,22 @@ void print_tensor4_mask(const uint8_t *mask, const tensor4_t *A);
 //void convbuffer(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right);
 
 
-//forward
+//Optimised convolution of dataX with dataK (tensor pointers are just to give the information dimension)
+void convBuffer(const tensor4_t *X, const float *dataX,
+                const tensor4_t *K, const float *dataK,
+                const tensor4_t *Z, float *dataZ,
+                size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right);
+
+
+                //Optimised convolution of dataX with dataK (tensor pointers are just to give the information dimension)
+//convolution of a tensor X with a tensor K
 void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding);
 
+//Kernel Flip
+void kernelFlip(const tensor4_t *K, tensor4_t **Kflipped);
+
+//Performs ReLU
+void ReLU(tensor4_t *T);
 
 //X is the input, K the parameters, type padding type and Z the output parameter
 //void conv_cumulate(const tensor4_t *X, const tensor4_t *K, const padding_t type, tensor4_t **Z);
@@ -139,28 +121,36 @@ void addBias(tensor4_t *t, const float *b);                     //<--REWORK ?
 
 //Performs ReLU
 //void ReLU(float *tab, size_t size);
-void ReLU(tensor4_t *T);
 
-//Performs Softmax
-void SoftMax(float *tab, size_t size);
 
 //Performs MaxPool with a stored uint8 pooling mask
-void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask);
 
 //Performs the multiplication of W*X
-void matvec(const float *X, const tensor4_t *W, float **Z);
 
 void allocZ(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding);
 
-void outputConv(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding);
-
+//Computes the padding for a convolution
 void getPadding(size_t *t, size_t *b, size_t *l, size_t *r, const tensor4_t *K, padding_t padding);
 
-void convBuffer(const tensor4_t *X, const float *dataX,
-                const tensor4_t *K, const float *dataK,
-                const tensor4_t *Z, float *dataZ,
-                size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right);
 
+
+
+//----------------------------------//            
+//---        TO TEST             ---//
+//----------------------------------//
+void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask);
+
+//----------------------------------//            
+//---        TO WORK ON          ---//
+//----------------------------------//
+void matvec(const float *X, const tensor4_t *W, float **Z);
+
+//Performs Softmax
+void SoftMax(float *tab, size_t size);
+//----------------------------------//            
+//---      NOT USED OR OLD       ---//
+//----------------------------------//
+void outputConv(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding);
 
 //Wrappers
 #endif
