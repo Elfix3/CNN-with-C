@@ -394,7 +394,7 @@ void kernelFlip(const tensor4_t *K, tensor4_t **Kflipped){
     }
     
 
-
+    //Non thread friendly
     size_t idK = 0;
     //for each filter
     for(size_t f = 0; f<K->nbatch; f++){
