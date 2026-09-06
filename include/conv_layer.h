@@ -15,15 +15,18 @@ typedef struct{
     //A ---->   [MaxPooling]      ----> P
     //P ---->[Goes to another Layer] ----> Is the next X
 
+
+    //Add an ID ?
+
     //-> Input 
     const tensor4_t *X;                 //INPUT POINTER NOT OWNED
 
     //-> Parameters
     tensor4_t *K;                       //shape(size_k * size_k * n_maps * n_filters)
-    float *b;                           //size is n filter
+    float *b;                           //size is n_filter * n_batchs
     
     //-> Padding
-    padding_t padding_type;
+    padding_t padding;
    
     //->Back prop cache
     tensor4_t *dK;                      //OWNED

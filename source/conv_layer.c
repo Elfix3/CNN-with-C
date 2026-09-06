@@ -6,13 +6,15 @@ ConvLayer *init_conv_layer(size_t kernel_size, size_t n_fmap, size_t n_filter, p
     ConvLayer *l = (ConvLayer*)malloc(sizeof(ConvLayer));
     
 
-    //unkown input size, resolved during forward
+    //-> Input 
     l->X = NULL;
     l->K = init_tensor4(kernel_size,kernel_size,n_fmap, n_filter,UNIFORM);
-    l->b = calloc(n_filter,sizeof(float)*n_filter);
-    l->padding_type = type;
+    l->b = calloc(n_filter,sizeof(float)*n_filter);                             //0 initaliztion
+    
+    l->padding = type;
     
     
+    l->A = NULL;
     // Test purposes
     for(size_t i = 0; i<  n_filter;i ++){
         l->b[i] = -0.1f;
@@ -22,8 +24,14 @@ ConvLayer *init_conv_layer(size_t kernel_size, size_t n_fmap, size_t n_filter, p
     l->P = NULL;
     l->Pooling_Mask = NULL;
 
+    //->Back prop cache
+    tensor4_t *dK = NULL;
+    float   *dB = NULL;
+    tensor4_t *A;
+    uint8_t *Pooling_Mask;
 
-    #if DEBUG
+
+    #if VERBOSE
         printf("Layer sucessfully created, tensor info :\n");
         print_tensor4_data(l->K);
     #endif
@@ -44,14 +52,22 @@ void clean_conv_layer(ConvLayer *l){
 }
 
 void forward(ConvLayer *l, const tensor4_t *X){
-    assert(l != NULL && "[forward] : null input layer");
-    assert(X != NULL && "[forward] : null input maps");
-    assert(l->K->shape[2] == X->shape[2] && "[forward] : Error non matching input to the K-tensor");
+    
+    REQUIRE(l != NULL,"Layer cannot be NULL");
+    REQUIRE(X != NULL,"Input X cannot be NULL");
 
+    //A terme possibilité de réallouer les Kernels ??
+    REQUIRE(l->K->nmap == X->nmap, "Featur map number must match between Input X and kernel K"); 
+    
+    l->X = X;
+    allocZ(l->X,l->K,&l->A,l->padding);
+    //add bias before;
+    
+    //conv4(l->X, l->K, &l->A, l->padding);
+    
     //--->  TIME METRICS
-    if(l->A == NULL){
-        
-    }
+    
+    
     //Allouer l->Z
     
     

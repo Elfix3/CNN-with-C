@@ -20,14 +20,25 @@ int main(int argc, char **argv){
     //-------------------------------------//
     //-----     FORWARD IN LAYER      -----//
     //-------------------------------------//
-    /* tensor4_t *X = init_tensor4(8,8,4,1,UNIFORM);
+
+    //----> INPUT
+    tensor4_t *X = init_tensor4(5,5,4,2,UNIFORM);
+    
+    //----> LAYER
     ConvLayer *l = init_conv_layer(3,4,3,SAME);
     
-    print_tensor4_data(l->K);
+    LOG_INFO("Input X :");
+    print_tensor4_shape(X);
     print_tensor4_data(X);
-    
-    forward(l, X); */
+    LOG_INFO("Layer Kernels :");
+    print_tensor4_shape(l->K);
+    print_tensor4_data(l->K);
 
+    forward(l, X);
+
+    LOG_INFO("OUTPUT :");
+    print_tensor4_shape(l->A);
+    print_tensor4_data(l->A);
 
     //-------------------------------------//
     //-----     TEST FOR POOLING      -----//
@@ -94,29 +105,31 @@ int main(int argc, char **argv){
     //-------------------------------------//
     //-----     TEST FOR NEWCONV      -----//
     //-------------------------------------//
-    
-    /* tensor4_t *X = init_tensor4(4,4,2,1, UNIFORM);
+    /* 
+    tensor4_t *X = init_tensor4(4,4,2,1, UNIFORM);
     tensor4_t *K = init_tensor4(2,2,2,2,UNIFORM);
-    tensor4_t *Z;
+    tensor4_t *Z = NULL;
     allocZ(X,K,&Z,SAME);
+    
     
     //tensor4_t *ZZ;
     printf("\n\n########\tInput Tensor X :\t########\n\n");
     print_tensor4_data(X);
     printf("\n\n########\tKernel K :\t########\n\n");
-    print_tensor4_data(K); */
+    print_tensor4_data(K);
     
     //double start = omp_get_wtime();
 
     
-    /* convBuffer(X,X->datas,
+    convBuffer(X,X->datas,
                 K, K->datas,
                 Z,Z->datas,
                 1,0,1,0);
 
-                
+    print_tensor4_data(Z);     
+        assert(0); */
     //Marche en ajoutant les strides !!
-    convBuffer(X,(X->datas + X->strides[2]),
+    /* convBuffer(X,(X->datas + X->strides[2]),
                 K, (K->datas + K->strides[2]),
                 Z, (Z->datas + Z->strides[2]),
                 1,0,1,0);
@@ -157,8 +170,8 @@ int main(int argc, char **argv){
     //-----     TEST FOR CONV4        -----//
     //-------------------------------------//
 
-    /* tensor4_t *X = init_tensor4(4,4,3,5, UNIFORM);      //<---INPUT
-    tensor4_t *K = init_tensor4(4,4,3,2, UNIFORM);      //<---KERNELS
+    /* tensor4_t *X = init_tensor4(5,5,3,5, UNIFORM);      //<---INPUT
+    tensor4_t *K = init_tensor4(3,3,3,2, UNIFORM);      //<---KERNELS
     
 
     tensor4_t *Z = NULL;                                //<---OUTPUT, should be 3*3*2*5
@@ -167,10 +180,11 @@ int main(int argc, char **argv){
     print_tensor4_data(X);
     LOG("Tensor K :");
     print_tensor4_data(K);
-    conv4(X,K,&Z,FULL);
     
-
-
+    allocZ(X,K,&Z,VALID);
+    
+    conv4(X,K,&Z,VALID);
+    
     LOG("Tensor Z Shape :");
     print_tensor4_shape(Z);
 
@@ -181,7 +195,7 @@ int main(int argc, char **argv){
     //-------------------------------------//
     //-----     TEST FOR CONV4        -----//
     //-------------------------------------//
-    tensor4_t *K = init_tensor4(3,3,3,2, UNIFORM);
+    /* tensor4_t *K = init_tensor4(3,3,3,2, UNIFORM);
     LOG_INFO("K tensor :");
     print_tensor4_data(K);
 
@@ -191,7 +205,7 @@ int main(int argc, char **argv){
 
     
     LOG_INFO("K flipped :");
-    print_tensor4_data(KFlip);
+    print_tensor4_data(KFlip); */
     
     return 0;
 }

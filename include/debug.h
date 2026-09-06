@@ -5,7 +5,7 @@
 #include "stdio.h"
 
 //Niveau des logs
-#define DEBUG       1
+#define DEBUG       0
 #define INFO        1
 #define WARNING     1
 #define ERROR       1

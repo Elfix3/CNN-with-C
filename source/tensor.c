@@ -80,13 +80,12 @@ void free_tensor4(tensor4_t **T){
 }
 
 void print_tensor4_shape(const tensor4_t *T){
+    REQUIRE(T != NULL, "Tensor cannot be NULL");
     printf("(%zu, %zu, %zu, %zu) : (Cols, Rows, Nfmap, Nbatch/NFilter)\n",T->shape[0],T->shape[1],T->shape[2],T->shape[3]);
 }
 
 void print_tensor4_data(const tensor4_t *T){
-    #if VERBOSE
-        print_tensor4_shape(T);
-    #endif
+    REQUIRE(T != NULL, "Tensor cannot be NULL");
     
     for(size_t i = 0; i<T->flatten_size; i++){
         if(!(i%T->strides[1])){
@@ -106,6 +105,7 @@ void print_tensor4_data(const tensor4_t *T){
 void print_tensor4_mask(const uint8_t *mask, const tensor4_t *A){
     //assert(t->shape[0]);
 
+
     for(size_t i = 0; i<A->flatten_size; i++){
         if(!(i%A->strides[1])){
             printf("\n");
@@ -121,14 +121,54 @@ void print_tensor4_mask(const uint8_t *mask, const tensor4_t *A){
     printf("\n\n");
 }
 
-void addBias(tensor4_t *t, const float *b){
+void convBuffer(const tensor4_t *X, const float *dataX, const tensor4_t *K, const float *dataK, const tensor4_t *Z, float *dataZ, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right){
+
+    //TENSOR Z ALREADY ALLOCATED
+    REQUIRE(Z != NULL,"Z output of convBuffer not allocated");
+    REQUIRE(X->nmap == K->nmap, "Number of feature map in input must match number of feature map in kernel");
+
+    for(size_t rZ = 0; rZ < Z->shape[1]; rZ++){
+        int rKlow =  pad_top - rZ; 
+        int rKhigh = pad_top - rZ + X->shape[1];
+        size_t rKStart = MAX(0,rKlow);
+        size_t rKEnd   = MIN(K->shape[1],(size_t)MAX(0, rKhigh));       
+
+        for(size_t cZ = 0; cZ < Z->shape[0]; cZ++){
+        
+            int cKlow =  pad_left - cZ; 
+            int cKhigh = pad_left - cZ + X->shape[0];
+            size_t cKStart = MAX(0,cKlow);
+            size_t cKEnd   = MIN(K->shape[0], (size_t)MAX(0, cKhigh));  
+            
+            
+            float acc = 0.0f;
+
+            for(size_t rK = rKStart; rK < rKEnd; rK++){
+                size_t rX = rK + rZ - pad_top;
+                for(size_t cK = cKStart; cK < cKEnd ; cK++){
+                    size_t cX = cK + cZ - pad_left;
+                    
+                    //Optimiser les accès
+                    //acc += get_t4_val(K,cK,rK,0,0)* get_t4_val(X,cX,rX,0,0);
+                    acc +=dataK[cK+ rK*K->strides[1]]*dataX[cX + rX*X->strides[1]];
+                }
+            }
+            dataZ[cZ + rZ*Z->strides[1]] += acc;
+            
+            
+        }
+    }
 
 }
 
-void ReLU(tensor4_t *T)
-{
+
+void addBias(tensor4_t *t, const float *b){
+    // ??
+}
+
+void ReLU(tensor4_t *T){
     //Throw some pragma tard
-    REQUIRE(T != NULL, "Input tensor is NULL");
+    REQUIRE(T != NULL, "Input tensor ptr is NULL");
     for(size_t i = 0; i<T->flatten_size; i++){
         if (T->datas[i] < 0.0f) {
             T->datas[i] = 0.0f;
@@ -159,6 +199,11 @@ void SoftMax(float *tab, size_t size){
 
 void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask){
     assert(A != NULL);
+
+    REQUIRE(A != NULL, "Tensor A ptr cannot be NULL");
+    REQUIRE(P != NULL, "Tensor P ptr cannot be NULL");
+    REQUIRE(Pooling_Mask != NULL, "Pooling mask ptr cannot be NULL");
+
 
     //Checks if P needs allocation
     uint8_t needs_realloc = (*P) == NULL || (*P)->shape[0] != (A->shape[0]+1)/2 ||            
@@ -220,58 +265,15 @@ void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask){
 }
 
 
-//Still used ?
-/* void allocZ(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding){
-    
-    if(*(Z) == NULL){
-        //LOG("Allocation of the tensor");
-        //mettre en verbose
-    } else {
-        return;                                 //Alloc only used one time
-    }
-
-    size_t Z_cols, Z_rows;
-
-    switch (padding){
-    case SAME :
-        Z_cols = X->shape[0];
-        Z_rows = X->shape[1];
- 
-    break;
-    case VALID :
-        assert(X->shape[0] >= K->shape[0] &&"Error, kernel too wide for a VALID conv");
-        assert(X->shape[1] >= K->shape[1] && "Error, kernel too long for a VALID conv");
-        Z_cols = X->shape[0] - K->shape[0] + 1;
-        Z_rows = X->shape[1] - K->shape[1] + 1;
-    break;
-    case FULL :
-        Z_cols = X->shape[0] + K->shape[0] - 1;
-        Z_rows = X->shape[1] + K->shape[1] - 1;
-    break;
-
-    default:
-        assert(0 && "Error: invalid padding mode");
-        break;
-    }
-    //printf("%zu %zu %zu %zu\n",Z_cols,Z_rows,K->nbatch,X->nbatch);
-    (*Z) = (tensor4_t*)init_tensor4(Z_cols,Z_rows,K->shape[3],X->shape[3],ZEROS);
-} */
-
 
 void allocZ(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding){
-    //Bah ouaismais faut gérer les tenseurs déjà alloués
-    if(X == NULL){
-        LOG_ERROR("Input Tensor is NULL"); assert(0);
-    }
-    REQUIRE(X != NULL && K != NULL, "No");
 
-    if(*(Z) == NULL){
-        //LOG("Allocation of the tensor");
-        //mettre en verbose
-    } else {
-        return;                                 //Alloc only used one time
-    }
+    REQUIRE(X != NULL, "Tensor X ptr is NULL");
+    REQUIRE(K != NULL, "Tensor K ptr is NULL");
+    REQUIRE(Z != NULL, "Tensor Z ptr is NULL");
 
+
+   
     size_t Z_cols, Z_rows, Z_nmaps, Z_batch;
 
     switch (padding){
@@ -299,12 +301,28 @@ void allocZ(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t pad
     Z_batch = X->nbatch;
     //printf("%zu %zu %zu %zu\n",Z_cols,Z_rows,K->nbatch,X->nbatch);
     
-    //Comparaison des dimensions --> nécessité d'allouer ?
-    (*Z) = (tensor4_t*)init_tensor4(Z_cols,Z_rows,K->shape[3],X->shape[3],ZEROS);
+    
+    uint8_t needs_alloc  = 0;
+
+    if(*(Z) == NULL){
+        needs_alloc = 1;
+    } else if(Z_cols != (*Z)->col || Z_rows != (*Z)->row || Z_nmaps != (*Z)->nmap || Z_batch != (*Z)->nbatch){
+        free_tensor4(Z);
+        needs_alloc = 1;
+    }
+
+    if(needs_alloc){
+        LOG_VERBOSE("New allocation");
+        (*Z) = (tensor4_t*)init_tensor4(Z_cols,Z_rows,K->shape[3],X->shape[3],ZEROS);
+    } else {
+        LOG_VERBOSE("Previous allocation keeped");
+    }
 }
 
 
 void getPadding(size_t *t, size_t *b, size_t *l, size_t *r, const tensor4_t *K, padding_t padding){
+    
+    REQUIRE(K != NULL, "Tensor K ptr is NULL");
     switch (padding){
         
     case VALID :
@@ -333,8 +351,8 @@ void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padd
     getPadding(&pad_top, &pad_bottom, &pad_left, &pad_right,K,padding);
     
     
-    //LOG_DEBUG("%zu %zu %zu %zu",pad_top,pad_bottom, pad_left, pad_right);
-    allocZ(X,K,Z,padding);
+    LOG_DEBUG("%zu %zu %zu %zu",pad_top,pad_bottom, pad_left, pad_right);
+    //allocZ(X,K,Z,padding);
     //LOG_DEBUG("Z : stide : %zu",(*Z)->strides[2]);
 
     //for each batche example
@@ -355,7 +373,6 @@ void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padd
             //For each fmap
             for(size_t m = 0; m < X->shape[2]; m++){
                 
-                //Holly hardcodded padding
                 LOG_DEBUG("Calling CONV BUFFER with : idX = %zu \t\t idK = %zu \t\t idZ = %zu \t\t idBatch = %zu",idX,idK,idZ,idxBatch);
 
                 convBuffer(X,(X->datas + idX),
@@ -378,16 +395,20 @@ void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padd
 
 void kernelFlip(const tensor4_t *K, tensor4_t **Kflipped){
     REQUIRE(K != NULL, "Cannot flipp NULL Kernel");
-
+    REQUIRE(Kflipped != NULL, "Cannot flipp NULL Kernel");
+    
     uint8_t needs_alloc  = 0;
 
-
+    //Check la nécessité d'allouer
     if((*Kflipped) == NULL){
         needs_alloc = 1;
     } else if(K->col != (*Kflipped)->col || K->row != (*Kflipped)->row ||  K->nmap != (*Kflipped)->nmap || K->nbatch != (*Kflipped)->nbatch){
+        //Libère le précédent tenseur s'il existait déjà
+        free_tensor4(Kflipped);
         needs_alloc = 1;
     }
 
+    //Alloue
     if(needs_alloc){
         LOG_VERBOSE("Tensor Kflip allocated");
         (*Kflipped) = init_tensor4(K->col, K->row, K->nmap, K->nbatch,NOFILL);        
@@ -415,86 +436,30 @@ void kernelFlip(const tensor4_t *K, tensor4_t **Kflipped){
     }
 }
 
-//######################################
-//######## TRAVAIL TEMPORAIRE #########
-//######################################
+//A TESTER
+void setBias(tensor4_t *Z, float *b){
+    REQUIRE(Z != NULL, "Input ptr Z cannoc be NULL");
+    REQUIRE(b != NULL, "b pointers unitialized");
 
-/* void conv_cumulate(const tensor4_t *X, const tensor4_t *K, const padding_t type, tensor4_t **Z)
-{
-    //X has dimension : x*y*n*m (n is the number of feature maps per image, m is the number of images in a batch)
-    assert(X != NULL && "Error conv_cumulate : NULL X parameter");
-    assert(K != NULL && "Error during conv cumulate : NULL K");
-    assert(Z != NULL && "Error during conv cumulate : NULL Z");
-
-    assert(X->shape[2] == K->shape[2]);
-
-    size_t Z_cols = get_conv_dim(X,K,0,type);
-    size_t Z_rows = get_conv_dim(X,K,1,type);    
-    size_t Z_fmaps = K->shape[3];
-    size_t Z_batch = X->shape[3];
-
-    uint8_t needs_alloc =   (*Z) == NULL ||
-                            (*Z)->shape[0] != Z_cols || 
-                            (*Z)->shape[1] != Z_rows ||
-                            (*Z)->shape[2] != Z_fmaps || 
-                            (*Z)->shape[3] != Z_batch;
-    if(needs_alloc){
-        
-        if (*Z != NULL) {free_tensor4(Z);}
-        (*Z) = (tensor4_t*)init_tensor4(Z_cols, Z_rows, Z_fmaps, Z_batch, NOFILL);
-        LOG("Output tensor allocated, calculation starts");
-
-    } else {
-        LOG("Output tensor already alocated, calculation starts");
-    }
-
-    //Allocates conv buffers
-    size_t flat_conv_size = (*Z)->strides[2];
-    float* acc =  calloc(flat_conv_size,sizeof(float));
-    float* conv_buffer = calloc(flat_conv_size,sizeof(float));
-    
-
-    
-    //#pragma omp parallel for
-
-    //For each image in the batch
-    for(size_t idx_batch = 0; idx_batch < X->shape[3]; idx_batch ++){
-
-        //For each filter
-        for(size_t idx_filter = 0; idx_filter < K->shape[3]; idx_filter++){
-        
-            //Accumulator reset
-            acc = memset(acc,0,sizeof(float)*flat_conv_size);
-
-        //For each Feature map
-            for(size_t idx_fmap = 0; idx_fmap < K->shape[2]; idx_fmap++){
-                memset(conv_buffer,0,sizeof(float)*flat_conv_size);
-                conv(
-                    X->datas + get_t4_idx(X,0,0,idx_fmap,idx_batch),          //Feature map indexée par la feature map et le numéro du batch
-                    X->shape[0],
-                    X->shape[1],
-
-                    K->datas + get_t4_idx(K,0,0,idx_fmap,idx_filter),        //Kernel indexé par la feature map et le numéro du filtre
-                    K->shape[0],
-                    K->shape[1],
-                    
-                    conv_buffer,        
-                    Z_cols,
-                    Z_rows, 
-                    type
-                );
-                cumulate(acc,conv_buffer, flat_conv_size);
+    //Non thread friendly
+    size_t idZ = 0;
+    for(size_t nb = 0; nb <Z->nbatch; nb++){
+        for(size_t m = 0; b<Z->nmap; m++){
+            
+            size_t idxB = m + nb*Z->nmap;
+            for(size_t i = 0; i< Z->strides[2]; i++){
+                Z->datas[idZ+i] = b[idxB];
             }
-        memcpy((*Z)->datas+get_t4_idx((*Z),0,0,idx_filter,idx_batch), acc, flat_conv_size*sizeof(float));
+
+            idZ += Z->strides[2];
         }
     }
 
-    free(conv_buffer);
-    free(acc);
-} */
+}
 
-
-
+//######################################
+//######## TRAVAIL TEMPORAIRE #########
+//######################################
 
 //modify this to have tensor X as input
 /* void matvec(const float *X, const tensor4_t *W, float **Z){
@@ -516,46 +481,3 @@ void kernelFlip(const tensor4_t *K, tensor4_t **Kflipped){
         }    
     }
 } */
-
-
-
- //Doit être une conv intermédiaire
-void convBuffer(const tensor4_t *X, const float *dataX, const tensor4_t *K, const float *dataK, const tensor4_t *Z, float *dataZ, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right){
-
-    //TENSOR Z ALREADY ALLOCATED
-    REQUIRE(Z != NULL,"Z output of convBuffer not allocated");
-    REQUIRE(X->nmap == K->nmap, "Number of feature map in input must match number of feature map in kernel");
-
-    for(size_t rZ = 0; rZ < Z->shape[1]; rZ++){
-        int rKlow =  pad_top - rZ; 
-        int rKhigh = pad_top - rZ + X->shape[1];
-        size_t rKStart = MAX(0,rKlow);
-        size_t rKEnd   = MIN(K->shape[1],(size_t)MAX(0, rKhigh));       
-
-        for(size_t cZ = 0; cZ < Z->shape[0]; cZ++){
-        
-            int cKlow =  pad_left - cZ; 
-            int cKhigh = pad_left - cZ + X->shape[0];
-            size_t cKStart = MAX(0,cKlow);
-            size_t cKEnd   = MIN(K->shape[0], (size_t)MAX(0, cKhigh));  
-            
-            
-            float acc = 0.0f;
-
-            for(size_t rK = rKStart; rK < rKEnd; rK++){
-                size_t rX = rK + rZ - pad_top;
-                for(size_t cK = cKStart; cK < cKEnd ; cK++){
-                    size_t cX = cK + cZ - pad_left;
-                    
-                    //Optimiser les accès
-                    //acc += get_t4_val(K,cK,rK,0,0)* get_t4_val(X,cX,rX,0,0);
-                    acc +=dataK[cK+ rK*K->strides[1]]*dataX[cX + rX*X->strides[1]];
-                }
-            }
-            dataZ[cZ + rZ*Z->strides[1]] += acc;
-            
-            
-        }
-    }
-
-}

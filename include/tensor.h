@@ -110,6 +110,9 @@ void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padd
 //Kernel Flip
 void kernelFlip(const tensor4_t *K, tensor4_t **Kflipped);
 
+//sets the bias
+void setBias(tensor4_t *Z, float *b);
+
 //Performs ReLU
 void ReLU(tensor4_t *T);
 
