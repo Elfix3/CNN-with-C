@@ -10,7 +10,7 @@
 
 typedef struct{
     //Operation ;
-    //X ---->   [conv K] + b      ----> Z
+    //X ---->   b + [conv K]      ----> Z
     //Z ---->   [ReLU]            ----> A
     //A ---->   [MaxPooling]      ----> P
     //P ---->[Goes to another Layer] ----> Is the next X
@@ -28,12 +28,15 @@ typedef struct{
     //-> Padding
     padding_t padding;
    
-    //->Back prop cache
-    tensor4_t *dK;                      //OWNED
-    float   *dB;                        //OWNED
+    //Back prop cache outputs
     tensor4_t *A;                       // <=> RELU(Z) (owned)
     uint8_t *Pooling_Mask;              //Masque de pooling
 
+    //->Back prop cache gradients
+    tensor4_t *dK;                      //OWNED
+    float   *dB;                        //OWNED
+
+    
     //-> Output
     tensor4_t *P;                       //Goes to the next layer OWNED        <--- FORWARD
     tensor4_t *dX;                      //Goes to the previous layer OWNED     <--- BACKWARD

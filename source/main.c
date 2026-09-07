@@ -14,6 +14,8 @@
 #include "conv_layer.h"
 
 int main(int argc, char **argv){
+
+    //Franchement pas dingue, ca m'initalise beaucoup de valeurs négatives parfois -> gradient vanishing :(
     srand(time(NULL));
     
 
@@ -37,8 +39,8 @@ int main(int argc, char **argv){
     forward(l, X);
 
     LOG_INFO("OUTPUT :");
-    print_tensor4_shape(l->A);
-    print_tensor4_data(l->A);
+    //print_tensor4_data(l->A);
+    //print_tensor4_shape(l->A);
 
     //-------------------------------------//
     //-----     TEST FOR POOLING      -----//

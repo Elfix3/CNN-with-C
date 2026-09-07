@@ -105,7 +105,7 @@ void convBuffer(const tensor4_t *X, const float *dataX,
 
                 //Optimised convolution of dataX with dataK (tensor pointers are just to give the information dimension)
 //convolution of a tensor X with a tensor K
-void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding);
+void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t *Z, padding_t padding);
 
 //Kernel Flip
 void kernelFlip(const tensor4_t *K, tensor4_t **Kflipped);
@@ -132,6 +132,8 @@ void addBias(tensor4_t *t, const float *b);                     //<--REWORK ?
 
 void allocZ(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding);
 
+void allocP(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask);
+
 //Computes the padding for a convolution
 void getPadding(size_t *t, size_t *b, size_t *l, size_t *r, const tensor4_t *K, padding_t padding);
 
@@ -141,7 +143,7 @@ void getPadding(size_t *t, size_t *b, size_t *l, size_t *r, const tensor4_t *K, 
 //----------------------------------//            
 //---        TO TEST             ---//
 //----------------------------------//
-void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask);
+void MaxPool(const tensor4_t *A, tensor4_t *P, uint8_t *Pooling_Mask);
 
 //----------------------------------//            
 //---        TO WORK ON          ---//

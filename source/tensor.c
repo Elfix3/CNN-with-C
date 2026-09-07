@@ -197,7 +197,7 @@ void SoftMax(float *tab, size_t size){
 }
 
 
-void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask){
+void MaxPool(const tensor4_t *A, tensor4_t *P, uint8_t *Pooling_Mask){
     assert(A != NULL);
 
     REQUIRE(A != NULL, "Tensor A ptr cannot be NULL");
@@ -205,60 +205,40 @@ void MaxPool(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask){
     REQUIRE(Pooling_Mask != NULL, "Pooling mask ptr cannot be NULL");
 
 
-    //Checks if P needs allocation
-    uint8_t needs_realloc = (*P) == NULL || (*P)->shape[0] != (A->shape[0]+1)/2 ||            
-    (*P)->shape[1] != (A->shape[1]+1)/2 || (*P)->shape[2] != A->shape[2] || (*P)->shape[3] != A->shape[3];
-
-    //Proceed to P and pooling Mask reallocation
-    if(needs_realloc){
-        if((*P) != NULL){free_tensor4(P);}
-        (*P) = (tensor4_t*)init_tensor4((A->shape[0]+1)/2,(A->shape[1]+1)/2,A->shape[2],A->shape[3],NOFILL);
-        
-        if((*Pooling_Mask) != NULL) free(*Pooling_Mask);
-        (*Pooling_Mask) = calloc(A->flatten_size, sizeof(uint8_t));
-    }
-
-
     size_t store_index = 0;    
+    //Non thread safe
+    for(size_t idx_batch = 0; idx_batch < A->nbatch; idx_batch++){
+        size_t batch_offset = idx_batch * A->strides[3]; 
 
+        for(size_t idx_im = 0; idx_im < A->strides[3]; idx_im += A->strides[2]){
+            for(size_t idx_row = 0; idx_row < A->strides[2]; idx_row += 2*A->strides[1]){
+                for(size_t idx_col = 0; idx_col < A->strides[1]; idx_col += 2){
 
-    // ON DOIT ITERER SUR LE BATCH !!
-    //for each image
+                    float max_val;
+                    size_t max_index;
 
-    //foreach FEATURE MAP NOT IMAGE
-    for(size_t idx_im = 0; idx_im <A->strides[3]; idx_im+= A->strides[2]){
-        for(size_t idx_row = 0; idx_row < A->strides[2]; idx_row += 2*A->strides[1]){
-            for(size_t idx_col = 0; idx_col < A->strides[1]; idx_col += 2){
+                    size_t a = batch_offset + idx_im + idx_row + idx_col;
+                    size_t b = a + 1;
+                    size_t c = a + A->strides[1];
+                    size_t d = c + 1;
 
-                float max_val;
-                size_t max_index;
+                    if((idx_row + A->strides[1] >= A->strides[2]) && (idx_col+1 >= A->strides[1])){
+                        max_val = A->datas[a];
+                        max_index = a;
+                    } else if(idx_row + A->strides[1] >= A->strides[2]){
+                        max_val = MAX(A->datas[a],A->datas[b]);
+                        max_index = (A->datas[a] >= A->datas[b]) ? a : b;
+                    } else if(idx_col+1 >= A->strides[1]){
+                        max_val = MAX(A->datas[a],A->datas[c]);
+                        max_index = (A->datas[a] >= A->datas[c]) ? a : c;
+                    } else {
+                        max_val = max4(A->datas[a], A->datas[b], A->datas[c], A->datas[d]);
+                        max_index = maxindex4(A->datas[a], A->datas[b], A->datas[c], A->datas[d], a, b, c, d);
+                    }
 
-                size_t a = idx_im + idx_row + idx_col;
-                size_t b = a + 1;
-                size_t c = a + A->strides[1];
-                size_t d = c + 1;
-                
-
-                //Bound check
-                if((idx_row + A->strides[1] >= A->strides[2]) && (idx_col+1 >= A->strides[1])){
-                    max_val = A->datas[a];
-                    max_index = a;
-
-                } else if(idx_row + A->strides[1] >= A->strides[2]){
-                    max_val = MAX(A->datas[a],A->datas[b]);
-                    max_index = (A->datas[a] >= A->datas[b]) ? a : b;
-
-                } else if((idx_col+1 >= A->strides[1])){
-                    max_val = MAX(A->datas[a],A->datas[c]);
-                    max_index = (A->datas[a] >= A->datas[c]) ? a :c;
-
-                } else {
-                    max_val = max4(A->datas[a], A->datas[b], A->datas[c], A->datas[d]);
-                    max_index = maxindex4(A->datas[a], A->datas[b], A->datas[c], A->datas[d],a,b,c,d);
+                    Pooling_Mask[max_index] = (uint8_t)1;
+                    P->datas[store_index++] = max_val;
                 }
-                (*Pooling_Mask)[max_index] = (uint8_t)1;
-                (*P)->datas[store_index++] = max_val;
-                
             }
         }
     }
@@ -319,6 +299,36 @@ void allocZ(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t pad
     }
 }
 
+void allocP(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask){
+    REQUIRE(A != NULL, "Tensor A ptr is NULL");
+    REQUIRE(P != NULL, "Tensor P ptr is NULL");
+    REQUIRE(Pooling_Mask != NULL, "Mask is NULL");
+
+    size_t P_cols = (A->col+1) /2;
+    size_t P_rows = (A->row+1) /2;
+
+    uint8_t needs_alloc  = 0;
+
+    if(*(P) == NULL){
+        needs_alloc = 1;
+    } else {
+        uint8_t dimensionChanged = ((*P)->shape[0] != P_cols)|| (*P)->shape[1] != P_rows ||
+        (*P)->nmap != A->nmap || (*P)->nbatch != A->nbatch;
+        if(dimensionChanged){
+            needs_alloc = 1;
+            free_tensor4(P);
+        }
+    }
+    
+    if(needs_alloc){
+        LOG_VERBOSE("New allocation");
+        (*P) = (tensor4_t*)init_tensor4(P_cols,P_rows,A->nmap,A->nbatch,ZEROS);
+        (*Pooling_Mask) = calloc(A->flatten_size, sizeof(uint8_t));
+    } else {
+        LOG_VERBOSE("Previous allocation keeped");
+    }
+
+}
 
 void getPadding(size_t *t, size_t *b, size_t *l, size_t *r, const tensor4_t *K, padding_t padding){
     
@@ -339,7 +349,7 @@ void getPadding(size_t *t, size_t *b, size_t *l, size_t *r, const tensor4_t *K, 
     }
 }
 
-void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding){
+void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t *Z, padding_t padding){
     assert(X != NULL && "Error conv_cumulate : NULL X parameter");
     assert(K != NULL && "Error during conv cumulate : NULL K");
     assert(Z != NULL && "Error during conv cumulate : NULL Z");
@@ -377,14 +387,14 @@ void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padd
 
                 convBuffer(X,(X->datas + idX),
                             K, (K->datas + idK),
-                            *Z, ((*Z)->datas + idZ),
+                            Z, (Z->datas + idZ),
                             pad_top,pad_bottom,pad_left,pad_right);
                 
                 idX += X->strides[2];
                 idK += K->strides[2];
             }
             //idK += K->strides[3];
-            idZ += (*Z)->strides[2];
+            idZ += Z->strides[2];
             idX = idxBatch;
         }
         idK = 0;
@@ -444,11 +454,9 @@ void setBias(tensor4_t *Z, float *b){
     //Non thread friendly
     size_t idZ = 0;
     for(size_t nb = 0; nb <Z->nbatch; nb++){
-        for(size_t m = 0; b<Z->nmap; m++){
-            
-            size_t idxB = m + nb*Z->nmap;
+        for(size_t m = 0; m<Z->nmap; m++){
             for(size_t i = 0; i< Z->strides[2]; i++){
-                Z->datas[idZ+i] = b[idxB];
+                Z->datas[idZ+i] = b[m];
             }
 
             idZ += Z->strides[2];

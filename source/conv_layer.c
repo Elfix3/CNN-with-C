@@ -8,28 +8,31 @@ ConvLayer *init_conv_layer(size_t kernel_size, size_t n_fmap, size_t n_filter, p
 
     //-> Input 
     l->X = NULL;
-    l->K = init_tensor4(kernel_size,kernel_size,n_fmap, n_filter,UNIFORM);
-    l->b = calloc(n_filter,sizeof(float)*n_filter);                             //0 initaliztion
     
+    //-> Parameters
+    l->K = init_tensor4(kernel_size,kernel_size,n_fmap, n_filter,UNIFORM);
+    l->b = calloc(n_filter,sizeof(float));  
+    
+    //-> Padding
     l->padding = type;
     
-    
+    //Back prop cache outputs
     l->A = NULL;
-    // Test purposes
-    for(size_t i = 0; i<  n_filter;i ++){
-        l->b[i] = -0.1f;
-    }
-
-    //Unknown until first forward
-    l->P = NULL;
     l->Pooling_Mask = NULL;
 
-    //->Back prop cache
-    tensor4_t *dK = NULL;
-    float   *dB = NULL;
-    tensor4_t *A;
-    uint8_t *Pooling_Mask;
+    //->Back prop cache gradients
+    l->dK = NULL;
+    l->dB = NULL;
+    
+    //-> Output
+    l->P = NULL;
+    l->dX = NULL;
 
+
+    
+    for(size_t i = 0; i<  n_filter;i ++){
+        l->b[i] = 0.2f;
+    }
 
     #if VERBOSE
         printf("Layer sucessfully created, tensor info :\n");
@@ -42,10 +45,15 @@ ConvLayer *init_conv_layer(size_t kernel_size, size_t n_fmap, size_t n_filter, p
 void clean_conv_layer(ConvLayer *l){
     assert(l != NULL && "Error null pointer in clean_conv_layer");
     
+    //Back prop cache outputs
+    free_tensor4(&l->A);
     free(l->Pooling_Mask);
+
+    //->Back prop cache gradients
     free_tensor4(&l->dK);
     free(l->dB);
-    free_tensor4(&l->A);
+    
+    //-> Output
     free_tensor4(&l->P);
     free_tensor4(&l->dX);
 
@@ -56,13 +64,34 @@ void forward(ConvLayer *l, const tensor4_t *X){
     REQUIRE(l != NULL,"Layer cannot be NULL");
     REQUIRE(X != NULL,"Input X cannot be NULL");
 
-    //A terme possibilité de réallouer les Kernels ??
+    //A terme possibilité de réallouer les Kernels ?? (Franchement mauvaise idée)
     REQUIRE(l->K->nmap == X->nmap, "Featur map number must match between Input X and kernel K"); 
     
+    //Sets the input pointer, not owned
     l->X = X;
+
+    //Allocates the output tensor
     allocZ(l->X,l->K,&l->A,l->padding);
-    //add bias before;
     
+    setBias(l->A,l->b);
+    print_tensor4_data(l->A);
+    
+    conv4(l->X,l->K, l->A, l->padding);
+    print_tensor4_data(l->A);
+
+    LOG_INFO("OUTPUT A :");
+    ReLU(l->A);
+    print_tensor4_data(l->A);
+
+    allocP(l->A, &l->P, &l->Pooling_Mask);
+    
+    LOG_INFO("MAX POOL :");
+    MaxPool(l->A, l->P, l->Pooling_Mask);
+    print_tensor4_data(l->P);
+
+    LOG_INFO("POOLING MASK :");
+    print_tensor4_mask(l->Pooling_Mask, l->A);
+    //add bias before;
     //conv4(l->X, l->K, &l->A, l->padding);
     
     //--->  TIME METRICS
