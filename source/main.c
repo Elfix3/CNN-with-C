@@ -12,6 +12,7 @@
 //#include "layer.h"
 #include "tensor.h"
 #include "conv_layer.h"
+#include "img_view.h"
 
 int main(int argc, char **argv){
 
@@ -24,7 +25,7 @@ int main(int argc, char **argv){
     //-------------------------------------//
 
     //----> INPUT
-    tensor4_t *X = init_tensor4(5,5,4,2,UNIFORM);
+    /* tensor4_t *X = init_tensor4(5,5,4,2,UNIFORM);
     
     //----> LAYER
     ConvLayer *l = init_conv_layer(3,4,3,SAME);
@@ -38,7 +39,7 @@ int main(int argc, char **argv){
 
     forward(l, X);
 
-    LOG_INFO("OUTPUT :");
+    LOG_INFO("OUTPUT :"); */
     //print_tensor4_data(l->A);
     //print_tensor4_shape(l->A);
 
@@ -209,6 +210,19 @@ int main(int argc, char **argv){
     LOG_INFO("K flipped :");
     print_tensor4_data(KFlip); */
     
+    //-------------------------------------//
+    //-----    TEST FOR IMG VIEWER    -----//
+    //-------------------------------------//
+
+    //debug_show_image(r_channel, g_channel, b_channel, "input_batch_3_img_7");
+    load_CIFAR_Single_Batch("data_batch_2.bin");
+    load_CIFAR();
+    //load_CIFAR();
+    /* show_image(batch2,8954);
+    show_image(batch3,8856);
+    show_image(batch4,8123);
+    show_image(batch5,8442);
+    show_image(test,7321); */
     return 0;
 }
 
