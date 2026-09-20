@@ -46,7 +46,7 @@ typedef struct{
 
 
 
-/**Initializes the parameters of the layer */
+/**Initializes the parameters of the layer */           //implement constructor for previous layer as well ? or from prevous output Shape ?
 ConvLayer *init_conv_layer(size_t kernel_size ,size_t n_fmap, size_t n_filter, padding_t type);
 
 //Clears data except parameters

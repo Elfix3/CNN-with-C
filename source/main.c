@@ -215,14 +215,87 @@ int main(int argc, char **argv){
     //-------------------------------------//
 
     //debug_show_image(r_channel, g_channel, b_channel, "input_batch_3_img_7");
-    load_CIFAR_Single_Batch("data_batch_2.bin");
+   /*  load_CIFAR_Single_Batch("data_batch_2.bin");
     load_CIFAR();
     //load_CIFAR();
+
+    for(int i = 122; i < 122+6; i++){
+        show_image(batch1,i);
+    } */
+
     /* show_image(batch2,8954);
     show_image(batch3,8856);
     show_image(batch4,8123);
     show_image(batch5,8442);
     show_image(test,7321); */
+
+
+    //-------------------------------------//
+    //----   LOAD TENSOR FROM BATCH    ----//
+    //-------------------------------------//
+    /* load_CIFAR();
+    tensor4_t *t = init_tensor_from_batch(batch1,0,1);
+    print_tensor4_data(t); */
+
+
+    //-------------------------------------//
+    //----      INFERENCE TEST         ----//
+    //-------------------------------------//
+    load_CIFAR();
+    tensor4_t *Input = init_tensor_from_batch(batch1,0,64);
+    ConvLayer *L1 = init_conv_layer(3,3,256,SAME);
+    ConvLayer *L2 = init_conv_layer(3,256,128,SAME);
+    ConvLayer *L3 = init_conv_layer(3,128,32,SAME);
+
+    double start = omp_get_wtime();
+    printf("Threads : %i\n",omp_get_max_threads());
+    forward(L1, Input);
+    forward(L2, L1->P);
+    forward(L3, L2->P);
+    double end = omp_get_wtime();
+    
+    printf("Forward time : %.4f\n",end-start);
+
+    /* print_tensor4_shape(Input);
+    print_tensor4_shape(L1->P);
+    print_tensor4_shape(L2->P);
+    print_tensor4_shape(L3->P); */
+
+    //print_tensor4_data(L3->P);
+
+
+    //-------------------------------------//
+    //----  THREADED CONV4 COMPARAISON ----//
+    //-------------------------------------//
+    padding_t pad = FULL;
+    
+    tensor4_t *X = init_tensor4(8,8,3,5,UNIFORM);
+    tensor4_t *W = init_tensor4(3,3,3,2,UNIFORM);
+
+    tensor4_t *ZRef = NULL;
+    tensor4_t *ZThreaded = NULL;
+    
+    allocZ(X,W,&ZRef,pad);
+    allocZ(X,W,&ZThreaded,pad);
+    
+    conv4(X,W,ZRef,pad);
+    conv4threaded(X,W,ZThreaded,pad);
+
+    LOG_COLOR(YELLOW,"ZREF");
+    print_tensor4_shape(ZRef);
+    //print_tensor4_data(ZRef);
+
+    LOG_COLOR(YELLOW,"ZTHREAD");
+    print_tensor4_shape(ZThreaded);
+    //print_tensor4_data(ZThreaded);
+
+    if(compareTensor4(ZRef,ZThreaded)){
+        LOG_COLOR(RED,"Error Different tensors");
+    } else {
+        LOG_COLOR(GREEN,"OK tensors are the same");
+    }
+    //assert(0);
+
     return 0;
 }
 

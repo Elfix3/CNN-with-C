@@ -65,7 +65,7 @@ void forward(ConvLayer *l, const tensor4_t *X){
     REQUIRE(X != NULL,"Input X cannot be NULL");
 
     //A terme possibilité de réallouer les Kernels ?? (Franchement mauvaise idée)
-    REQUIRE(l->K->nmap == X->nmap, "Featur map number must match between Input X and kernel K"); 
+    REQUIRE(l->K->nmap == X->nmap, "Feature map number must match between Input X and kernel K"); 
     
     //Sets the input pointer, not owned
     l->X = X;
@@ -74,23 +74,22 @@ void forward(ConvLayer *l, const tensor4_t *X){
     allocZ(l->X,l->K,&l->A,l->padding);
     
     setBias(l->A,l->b);
-    print_tensor4_data(l->A);
+    //print_tensor4_data(l->A);
     
-    conv4(l->X,l->K, l->A, l->padding);
-    print_tensor4_data(l->A);
+    conv4threaded(l->X,l->K, l->A, l->padding);
+    //print_tensor4_data(l->A);
 
     LOG_INFO("OUTPUT A :");
     ReLU(l->A);
-    print_tensor4_data(l->A);
+    //print_tensor4_data(l->A);
 
     allocP(l->A, &l->P, &l->Pooling_Mask);
-    
     LOG_INFO("MAX POOL :");
     MaxPool(l->A, l->P, l->Pooling_Mask);
-    print_tensor4_data(l->P);
+    //print_tensor4_data(l->P);
 
     LOG_INFO("POOLING MASK :");
-    print_tensor4_mask(l->Pooling_Mask, l->A);
+    //print_tensor4_mask(l->Pooling_Mask, l->A);
     //add bias before;
     //conv4(l->X, l->K, &l->A, l->padding);
     

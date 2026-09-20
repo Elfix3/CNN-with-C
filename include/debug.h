@@ -6,7 +6,7 @@
 
 //Niveau des logs
 #define DEBUG       0
-#define INFO        1
+#define INFO        0
 #define WARNING     1
 #define ERROR       1
 #define VERBOSE     0
@@ -23,6 +23,10 @@
 
 //Message générique de log (pas utilisé hors développement)
 #define LOG(msg)                        printf("\n##### [%s] %s #####\n", __func__, msg)
+
+//Message générique de log avec Couleur
+#define LOG_COLOR(color, fmt, ...) \
+    fprintf(stdout, color fmt RESET "\n", ##__VA_ARGS__)
 
 //---> DEBUG
 #if DEBUG

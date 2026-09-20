@@ -25,6 +25,8 @@ tensor4_t *init_tensor4(size_t d0, size_t d1, size_t d2, size_t d3, distribution
     REQUIRE(d0 != 0 && d1 != 0 && d2 != 0 && d3 != 0,"Error, tensor 4 shape must be > 0");
     
     tensor4_t *T = (tensor4_t*)malloc(sizeof(tensor4_t));
+    if(!T){LOG_ERROR("Bad Alloc");}
+
     T->flatten_size = d0*d1*d2*d3;
     T->datas= (float*)malloc(sizeof(float)*T->flatten_size);
 
@@ -79,6 +81,28 @@ void free_tensor4(tensor4_t **T){
     *T = NULL;
 }
 
+tensor4_t *init_tensor_from_batch(Image *batch, size_t idxStart, size_t nimages){
+    //put some random batch features as well :)
+    //pas oublier les labels
+    //data normalisation
+
+    tensor4_t *t = init_tensor4(IMG_DIM,IMG_DIM, 3, nimages, NOFILL);
+    //assert(0);
+    for(size_t i = 0;  i<nimages; i++){
+        size_t offset = i*t->strides[3];
+        LOG_INFO("Offset %zu", offset);
+        const unsigned char *src = &batch[i].pixels[0][0];
+        for(size_t j = 0; j<t->strides[3]; j++){
+            t->datas[offset + j] = ((float)src[j]-127.5)/(127.5f);
+
+        } 
+    }
+    
+    
+    return t;
+}
+
+
 void print_tensor4_shape(const tensor4_t *T){
     REQUIRE(T != NULL, "Tensor cannot be NULL");
     printf("(%zu, %zu, %zu, %zu) : (Cols, Rows, Nfmap, Nbatch/NFilter)\n",T->shape[0],T->shape[1],T->shape[2],T->shape[3]);
@@ -121,7 +145,29 @@ void print_tensor4_mask(const uint8_t *mask, const tensor4_t *A){
     printf("\n\n");
 }
 
-void convBuffer(const tensor4_t *X, const float *dataX, const tensor4_t *K, const float *dataK, const tensor4_t *Z, float *dataZ, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right){
+uint8_t compareTensor4(const tensor4_t *T1, const tensor4_t *T2){
+    
+    REQUIRE(T1 != NULL,"Error tensor T1 NULL");
+    REQUIRE(T2 != NULL,"Error tensor T2 NULL");
+    
+    if(T1->flatten_size != T2->flatten_size){
+        return 1;
+    }
+    for(size_t i = 0; i<4; i++){
+        if(T1->shape[i] != T2->shape[i]){
+            return 1;
+        }
+    }
+    for(size_t i = 0;  i<T1->flatten_size; i++){
+        if(T1->datas[i] != T2->datas[i]){
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void convBuffer(const tensor4_t *X, const float *dataX, const tensor4_t *K, const float *dataK, const tensor4_t *Z, float *dataZ, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right)
+{
 
     //TENSOR Z ALREADY ALLOCATED
     REQUIRE(Z != NULL,"Z output of convBuffer not allocated");
@@ -158,9 +204,7 @@ void convBuffer(const tensor4_t *X, const float *dataX, const tensor4_t *K, cons
             
         }
     }
-
 }
-
 
 void addBias(tensor4_t *t, const float *b){
     // ??
@@ -402,6 +446,53 @@ void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t *Z, padding_t paddi
         idxBatch += X->strides[3];
     }
 }
+
+
+void conv4threaded(const tensor4_t *X, const tensor4_t *K, tensor4_t *Z, padding_t padding){
+    assert(X != NULL && "Error conv_cumulate : NULL X parameter");
+    assert(K != NULL && "Error during conv cumulate : NULL K");
+    assert(Z != NULL && "Error during conv cumulate : NULL Z");
+
+    //TODO calculer les offset en fonction du padding
+    
+    
+    size_t pad_top, pad_bottom, pad_left, pad_right;
+    getPadding(&pad_top, &pad_bottom, &pad_left, &pad_right,K,padding);
+    
+    
+    LOG_DEBUG("%zu %zu %zu %zu",pad_top,pad_bottom, pad_left, pad_right);
+
+    #pragma omp parallel for
+    for(size_t b = 0; b<X->shape[3]; b++){
+        
+        size_t XStrideBatch = b*X->strides[3];
+        size_t ZStrideBatch = b*Z->strides[3];
+        //For each filter
+        for(size_t f = 0; f < K->shape[3]; f++){
+            
+            size_t KStrideFilter = f*K->strides[3];
+            size_t ZStrideFilter = f*Z->strides[2];
+            
+            for(size_t m = 0; m < X->shape[2]; m++){
+                
+                size_t idX = XStrideBatch + m*X->strides[2];
+                size_t idK = KStrideFilter + m*K->strides[2];
+                size_t idZ = ZStrideBatch + ZStrideFilter;
+
+                LOG_DEBUG("Calling CONV BUFFER with : idX = %zu \t\t idK = %zu \t\t idZ = %zu \t\t idBatch = %zu",idX,idK,idZ,b);
+
+                convBuffer(X,(X->datas + idX),
+                            K, (K->datas + idK),
+                            Z, (Z->datas + idZ),
+                            pad_top,pad_bottom,pad_left,pad_right);
+                
+            }
+            
+        }
+    }
+}
+
+
 
 void kernelFlip(const tensor4_t *K, tensor4_t **Kflipped){
     REQUIRE(K != NULL, "Cannot flipp NULL Kernel");

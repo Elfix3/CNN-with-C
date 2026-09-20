@@ -11,6 +11,7 @@
 
 //My includes :
 #include "debug.h"
+#include "img_view.h"
 
 //<-----    fan_in is :     size_kernel * size_kernel * n_channels        ------>
 #define         HE_LIMIT(fan_in)            (sqrt(6.0 / (double)(fan_in)))
@@ -58,6 +59,8 @@ typedef struct{
 tensor4_t* init_tensor4(size_t d0, size_t d1, size_t d2, size_t d3, distribution_t type);
 void free_tensor4(tensor4_t **t);
 
+//Allocates and fills a tensor with batch
+tensor4_t* init_tensor_from_batch(Image *batch, size_t idxStart, size_t nimages);
 
 
 //----------------------------------//            
@@ -95,6 +98,7 @@ void print_tensor4_mask(const uint8_t *mask, const tensor4_t *A);
 //Generic convolution function
 //void convbuffer(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right);
 
+uint8_t compareTensor4(const tensor4_t *T1, const tensor4_t *T2);
 
 //Optimised convolution of dataX with dataK (tensor pointers are just to give the information dimension)
 void convBuffer(const tensor4_t *X, const float *dataX,
@@ -148,6 +152,9 @@ void MaxPool(const tensor4_t *A, tensor4_t *P, uint8_t *Pooling_Mask);
 //----------------------------------//            
 //---        TO WORK ON          ---//
 //----------------------------------//
+void conv4threaded(const tensor4_t *X, const tensor4_t *K, tensor4_t *Z, padding_t padding);
+
+
 void matvec(const float *X, const tensor4_t *W, float **Z);
 
 //Performs Softmax
