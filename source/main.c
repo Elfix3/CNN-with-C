@@ -17,7 +17,8 @@
 int main(int argc, char **argv){
 
     //Franchement pas dingue, ca m'initalise beaucoup de valeurs négatives parfois -> gradient vanishing :(
-    srand(time(NULL));
+    //srand(time(NULL);
+    srand(1790321699);          //Pseudo aléatoire biaisé
     
 
     //-------------------------------------//
@@ -238,10 +239,37 @@ int main(int argc, char **argv){
     print_tensor4_data(t); */
 
 
+
+    //-------------------------------------//
+    //----      MAXPOOL THREADED       ----//
+    //-------------------------------------//
+    /* tensor4_t *t = init_tensor4(5,5,2,2,UNIFORM);
+    tensor4_t *Pref = NULL;
+    tensor4_t *Presult = NULL;
+    uint8_t *MaskRef = NULL;
+    uint8_t *MaskResult = NULL;
+
+    allocP(t,&Pref, &MaskRef);
+    allocP(t,&Presult, &MaskResult);
+    
+    print_tensor4_data(t);
+
+    MaxPool(t,Pref,MaskRef);
+    print_tensor4_data(Pref);
+    MaxPoolThreaded(t,Presult,MaskResult);
+    print_tensor4_data(Presult);
+    
+
+    if(compareTensor4(Pref, Presult)){
+        LOG_COLOR(RED,"Error Different tensors");
+    } else {
+        LOG_COLOR(GREEN,"OK tensors are the same");
+    } */
+    //assert(0);
     //-------------------------------------//
     //----      INFERENCE TEST         ----//
     //-------------------------------------//
-    load_CIFAR();
+    /* load_CIFAR();
     tensor4_t *Input = init_tensor_from_batch(batch1,0,64);
     ConvLayer *L1 = init_conv_layer(3,3,256,SAME);
     ConvLayer *L2 = init_conv_layer(3,256,128,SAME);
@@ -256,6 +284,22 @@ int main(int argc, char **argv){
     
     printf("Forward time : %.4f\n",end-start);
 
+    //Ecriture de la sortie (pour comparaison avec winmerge) :
+    FILE *fptr;
+    fptr = fopen("Results.bin", "w");
+    if (fptr == NULL) {
+        perror("fopen");
+        return 1;
+    }
+
+    if(fwrite(L3->P->datas,sizeof(float), L3->P->flatten_size,fptr) != L3->P->flatten_size){
+        fclose(fptr);
+        LOG_ERROR("Incorrect file writing");
+    }
+    fclose(fptr);
+    LOG_COLOR(GREEN, "Successfull"); */
+    //print_tensor4_data(L3->P);
+
     /* print_tensor4_shape(Input);
     print_tensor4_shape(L1->P);
     print_tensor4_shape(L2->P);
@@ -263,11 +307,46 @@ int main(int argc, char **argv){
 
     //print_tensor4_data(L3->P);
 
+    //-------------------------------------//
+    //--- Threaded MAXPOOL COMPARAISON  ---//
+    //-------------------------------------//
+    //tensor4_t *X = init_tensor4(8,8,3,5,UNIFORM);
+    /* tensor4_t *t = init_tensor4(128,128,128,128,UNIFORM);
+    tensor4_t *Pref = NULL;
+    tensor4_t *Presult = NULL;
+    uint8_t *MaskRef = NULL;
+    uint8_t *MaskResult = NULL;
 
+    allocP(t,&Pref, &MaskRef);
+    allocP(t,&Presult, &MaskResult);
+    
+    //print_tensor4_data(t);
+
+    double start = omp_get_wtime();
+    MaxPool(t,Pref,MaskRef);
+    double end = omp_get_wtime();
+    printf("Non threaded time : %.6f\n",end-start);
+    
+    //print_tensor4_data(Pref);
+
+
+    start = omp_get_wtime();
+    MaxPoolThreaded(t,Presult,MaskResult);
+    end = omp_get_wtime();
+    printf("Threaded time : %.6f\n",end-start);
+    //print_tensor4_data(Presult);
+    
+
+    if(compareTensor4(Pref, Presult)){
+        LOG_COLOR(RED,"Error Different tensors");
+    } else {
+        LOG_COLOR(GREEN,"OK tensors are the same");
+    }
+ */
     //-------------------------------------//
     //----  THREADED CONV4 COMPARAISON ----//
     //-------------------------------------//
-    padding_t pad = FULL;
+    /* padding_t pad = FULL;
     
     tensor4_t *X = init_tensor4(8,8,3,5,UNIFORM);
     tensor4_t *W = init_tensor4(3,3,3,2,UNIFORM);
@@ -293,9 +372,43 @@ int main(int argc, char **argv){
         LOG_COLOR(RED,"Error Different tensors");
     } else {
         LOG_COLOR(GREEN,"OK tensors are the same");
-    }
-    //assert(0);
+    } */
 
+
+    //-------------------------------------//
+    //----  Threaded kernel Flip       ----//
+    //-------------------------------------//
+    /* const tensor4_t *W = init_tensor4(256,256,128,128,NOFILL);
+    tensor4_t *WFlipped = NULL;
+    tensor4_t *WFlippedThreaded = NULL;
+    
+    LOG_INFO("K original  : ");
+    //print_tensor4_data(W);
+
+    double start = omp_get_wtime();
+    kernelFlip(W,&WFlipped);
+    double end = omp_get_wtime();
+    printf("Non threaded time : %.6f\n",end-start);
+
+    double nstart = omp_get_wtime();
+    kernelFlipThreaded(W,&WFlippedThreaded);
+    double nend = omp_get_wtime();
+    printf("Threaded time : %.6f\n",nend-nstart);
+
+
+    LOG_INFO("Kflipped ref : ");
+    //print_tensor4_data(WFlipped);
+
+    LOG_INFO("Kflipped threaded : ");
+    //print_tensor4_data(WFlippedThreaded);
+    
+    if(compareTensor4(WFlipped, WFlippedThreaded)){
+        LOG_COLOR(RED,"Error Different tensors");
+    } else {
+        LOG_COLOR(GREEN,"OK tensors are the same");
+    } */
+
+    //assert(0);
     return 0;
 }
 

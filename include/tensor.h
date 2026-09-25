@@ -110,9 +110,14 @@ void convBuffer(const tensor4_t *X, const float *dataX,
                 //Optimised convolution of dataX with dataK (tensor pointers are just to give the information dimension)
 //convolution of a tensor X with a tensor K
 void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t *Z, padding_t padding);
+//threaded version (will replace the previous)
+void conv4threaded(const tensor4_t *X, const tensor4_t *K, tensor4_t *Z, padding_t padding);
+
 
 //Kernel Flip
 void kernelFlip(const tensor4_t *K, tensor4_t **Kflipped);
+
+void kernelFlipThreaded(const tensor4_t *K, tensor4_t **Kflipped);
 
 //sets the bias
 void setBias(tensor4_t *Z, float *b);
@@ -149,10 +154,10 @@ void getPadding(size_t *t, size_t *b, size_t *l, size_t *r, const tensor4_t *K, 
 //----------------------------------//
 void MaxPool(const tensor4_t *A, tensor4_t *P, uint8_t *Pooling_Mask);
 
+void MaxPoolThreaded(const tensor4_t *A, tensor4_t *P, uint8_t *Pooling_Mask);
 //----------------------------------//            
 //---        TO WORK ON          ---//
 //----------------------------------//
-void conv4threaded(const tensor4_t *X, const tensor4_t *K, tensor4_t *Z, padding_t padding);
 
 
 void matvec(const float *X, const tensor4_t *W, float **Z);

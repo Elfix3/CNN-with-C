@@ -3,3 +3,6 @@
 /cifar-10-binary
 debug_cifar.ppm
 programme.exe
+Reference.bin
+Results.bin
+backup.c

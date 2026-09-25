@@ -213,6 +213,8 @@ void addBias(tensor4_t *t, const float *b){
 void ReLU(tensor4_t *T){
     //Throw some pragma tard
     REQUIRE(T != NULL, "Input tensor ptr is NULL");
+    
+    #pragma omp parallel for
     for(size_t i = 0; i<T->flatten_size; i++){
         if (T->datas[i] < 0.0f) {
             T->datas[i] = 0.0f;
@@ -290,14 +292,84 @@ void MaxPool(const tensor4_t *A, tensor4_t *P, uint8_t *Pooling_Mask){
 
 
 
+
+void MaxPoolThreaded(const tensor4_t *A, tensor4_t *P, uint8_t *Pooling_Mask){
+    assert(A != NULL);
+
+    REQUIRE(A != NULL, "Tensor A ptr cannot be NULL");
+    REQUIRE(P != NULL, "Tensor P ptr cannot be NULL");
+    REQUIRE(Pooling_Mask != NULL, "Pooling mask ptr cannot be NULL");
+
+    /* if(P->flatten_size > 40000){
+        LOG_COLOR(GREEN, "Pll");
+        return;
+    } */
+
+    /* LOG_INFO("A Shape");
+    print_tensor4_shape(A);
+    LOG_INFO("P Shape");
+    print_tensor4_shape(P); */
+
+    //printf("tensor flatten : %zu\n", P->flatten_size);
+    
+    #pragma omp parallel for collapse(2)
+    for(size_t batch = 0; batch < P->nbatch; batch++){
+        
+        size_t AStrideBatch = batch*A->strides[3];
+        size_t PStrideBatch = batch*P->strides[3];
+
+        for(size_t filter = 0; filter < P->nmap; filter++){
+            size_t AStrideFilter = filter*A->strides[2]; 
+            size_t PStrideFilter = filter*P->strides[2]; 
+            
+            for(size_t pRow= 0; pRow < P->row; pRow++){
+                size_t AStrideRow = pRow*2*A->strides[1];
+                
+                for(size_t pCol = 0; pCol < P->col; pCol++){
+
+                    float max_val;
+                    size_t max_index;
+
+                    size_t a = AStrideBatch + AStrideFilter + AStrideRow + pCol*2;
+                    size_t b = a + 1;
+                    size_t c = a + A->strides[1];
+                    size_t d = c + 1;
+
+                    if((AStrideRow + A->strides[1] >= A->strides[2]) && ((pCol*2)+1 >= A->strides[1])){
+                        max_val = A->datas[a];
+                        max_index = a;
+                    }else if(AStrideRow + A->strides[1] >= A->strides[2]){
+                        max_val = MAX(A->datas[a],A->datas[b]);
+                        max_index = (A->datas[a] >= A->datas[b]) ? a : b;
+                    } else if((pCol*2)+1 >= A->strides[1]){
+                        max_val = MAX(A->datas[a],A->datas[c]);
+                        max_index = (A->datas[a] >= A->datas[c]) ? a : c;
+                    } else {
+                        max_val = max4(A->datas[a], A->datas[b], A->datas[c], A->datas[d]);
+                        max_index = maxindex4(A->datas[a], A->datas[b], A->datas[c], A->datas[d], a, b, c, d);
+                    }
+                    //Pooling_Mask[max_index] = (uint8_t)1;
+                    
+                    
+                    //printf("\nBatch : %zu Fmap : %zu Row : %zu Col : %zu",idx_batch, idx_im, idx_row, idx_col);
+                    size_t store_index = PStrideBatch + PStrideFilter + pRow*P->strides[1] + pCol;
+                    //printf("\nstore index : %zu\n",store_index);
+                    P->datas[store_index] = max_val;
+                    //assert(store_index<10000);
+                }
+            }
+        }
+    }
+    
+}
+
+
 void allocZ(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding){
 
     REQUIRE(X != NULL, "Tensor X ptr is NULL");
     REQUIRE(K != NULL, "Tensor K ptr is NULL");
     REQUIRE(Z != NULL, "Tensor Z ptr is NULL");
 
-
-   
     size_t Z_cols, Z_rows, Z_nmaps, Z_batch;
 
     switch (padding){
@@ -463,17 +535,17 @@ void conv4threaded(const tensor4_t *X, const tensor4_t *K, tensor4_t *Z, padding
     LOG_DEBUG("%zu %zu %zu %zu",pad_top,pad_bottom, pad_left, pad_right);
 
     #pragma omp parallel for
-    for(size_t b = 0; b<X->shape[3]; b++){
+    for(size_t b = 0; b<X->nbatch; b++){
         
         size_t XStrideBatch = b*X->strides[3];
         size_t ZStrideBatch = b*Z->strides[3];
         //For each filter
-        for(size_t f = 0; f < K->shape[3]; f++){
+        for(size_t f = 0; f < K->nbatch; f++){
             
             size_t KStrideFilter = f*K->strides[3];
             size_t ZStrideFilter = f*Z->strides[2];
             
-            for(size_t m = 0; m < X->shape[2]; m++){
+            for(size_t m = 0; m < X->nmap; m++){
                 
                 size_t idX = XStrideBatch + m*X->strides[2];
                 size_t idK = KStrideFilter + m*K->strides[2];
@@ -533,6 +605,47 @@ void kernelFlip(const tensor4_t *K, tensor4_t **Kflipped){
             }
             //printf("\n ");
             idK += K->strides[2];
+        }
+    }
+}
+
+void kernelFlipThreaded(const tensor4_t *K, tensor4_t **Kflipped){
+    REQUIRE(K != NULL, "Cannot flipp NULL Kernel");
+    REQUIRE(Kflipped != NULL, "Cannot flipp NULL Kernel");
+    
+    uint8_t needs_alloc  = 0;
+
+    //Check la nécessité d'allouer
+    if((*Kflipped) == NULL){
+        needs_alloc = 1;
+    } else if(K->col != (*Kflipped)->col || K->row != (*Kflipped)->row ||  K->nmap != (*Kflipped)->nmap || K->nbatch != (*Kflipped)->nbatch){
+        //Libère le précédent tenseur s'il existait déjà
+        free_tensor4(Kflipped);
+        needs_alloc = 1;
+    }
+
+    //Alloue
+    if(needs_alloc){
+        LOG_VERBOSE("Tensor Kflip allocated");
+        (*Kflipped) = init_tensor4(K->col, K->row, K->nmap, K->nbatch,NOFILL);        
+    }
+    
+
+    
+    //for each filter
+    #pragma omp parallel for
+    for(size_t f = 0; f< K->nbatch; f++){
+        size_t filterStride = f*K->strides[3];
+        //for each featuremap
+        for(size_t m = 0; m <K->nmap; m++){
+            size_t fmapStride = m*K->strides[2];
+            //Flip operation
+            for(size_t i = 0; i< K->strides[2]; i++){
+                
+                size_t idK = filterStride+fmapStride;
+                (*Kflipped)->datas[idK+i] = K->datas[idK+K->strides[2]-i-1];
+                
+            }
         }
     }
 }

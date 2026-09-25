@@ -6,7 +6,7 @@
 
 //Niveau des logs
 #define DEBUG       0
-#define INFO        0
+#define INFO        1
 #define WARNING     1
 #define ERROR       1
 #define VERBOSE     0

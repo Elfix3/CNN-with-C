@@ -77,18 +77,20 @@ void forward(ConvLayer *l, const tensor4_t *X){
     //print_tensor4_data(l->A);
     
     conv4threaded(l->X,l->K, l->A, l->padding);
+    //conv4(l->X,l->K, l->A, l->padding);
     //print_tensor4_data(l->A);
 
-    LOG_INFO("OUTPUT A :");
     ReLU(l->A);
     //print_tensor4_data(l->A);
 
     allocP(l->A, &l->P, &l->Pooling_Mask);
     LOG_INFO("MAX POOL :");
-    MaxPool(l->A, l->P, l->Pooling_Mask);
+    
+    printf("%.3f %.3f %.3f %.3f\n",l->A->datas[0],l->A->datas[1],l->A->datas[3],l->A->datas[3]);
+    
+    MaxPoolThreaded(l->A, l->P, l->Pooling_Mask);
     //print_tensor4_data(l->P);
-
-    LOG_INFO("POOLING MASK :");
+    
     //print_tensor4_mask(l->Pooling_Mask, l->A);
     //add bias before;
     //conv4(l->X, l->K, &l->A, l->padding);
