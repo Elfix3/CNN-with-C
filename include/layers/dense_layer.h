@@ -5,7 +5,7 @@
 
 //My includes
 #include "debug.h"
-#include "tensor.h"
+#include "tensor/tensor.h"
 
 
 typedef enum{

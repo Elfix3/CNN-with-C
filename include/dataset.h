@@ -1,11 +1,11 @@
-#ifndef IMG_VIEW_H
-#define IMG_VIEW_H
+#ifndef DATASET_H
+#define DATASET_H
 
 #include "stdio.h"
 #include "stdlib.h"
 #include "string.h"
 #include "debug.h"
-#include "tensor.h"
+#include "tensor/tensor.h"
 
 #define IMG_DIM         32
 #define IMG_SIZE        ((IMG_DIM)*(IMG_DIM))
@@ -19,6 +19,8 @@ typedef struct{
     unsigned char pixels[3][IMG_SIZE];
 } Image;
 
+
+//va être renommé en dataset.h
 
 
 extern Image* batch1;

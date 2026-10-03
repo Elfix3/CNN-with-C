@@ -1,4 +1,4 @@
-#include "dense_layer.h"
+#include "layers/dense_layer.h"
 
 
 DenseLayer *init_dense(size_t n, size_t m, activation_t type){

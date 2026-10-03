@@ -5,7 +5,9 @@
 #include "stdio.h"
 
 //My includes
-#include "tensor.h"
+#include "tensor/tensor.h"
+#include "tensor/ops_conv.h"
+#include "tensor/ops_activation.h"
 #include "debug.h"
 
 typedef struct{

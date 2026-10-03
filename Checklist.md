@@ -23,8 +23,7 @@ includes/
 │   ├── conv_layer.h
 │   └──  dense_layer.h
 └── tensor/
-    ├── layer.h
-    ├── conv_layer.h
-    └──  dense_layer.h
-
+    ├── tensor.h
+    ├── ops_conv.h
+    └── ops_lalgebra.h
 ```

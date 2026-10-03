@@ -1,4 +1,4 @@
-#include "conv_layer.h"
+#include "layers/conv_layer.h"
 
 
 
@@ -79,7 +79,7 @@ void forward_conv(ConvLayer *l, const tensor4_t *X){
     //print_tensor4_data(l->A);
     
     //pas besoin de reset grâce au biais
-    conv4threaded(l->X,l->K, l->A, l->padding);
+    conv4(l->X,l->K, l->A, l->padding);
     //conv4(l->X,l->K, l->A, l->padding);
     //print_tensor4_data(l->A);
 
@@ -88,11 +88,11 @@ void forward_conv(ConvLayer *l, const tensor4_t *X){
 
     //Allocates the output pooled tensor               (Va être déplacé dans le cstr)
     allocP(l->A, &l->P, &l->Pooling_Mask);
-    MaxPoolThreaded(l->A, l->P, l->Pooling_Mask);
+    MaxPool(l->A, l->P, l->Pooling_Mask);
     
 }
 
-void backward(ConvLayer *l, const tensor4_t *dP){
+void backward_conv(ConvLayer *l, const tensor4_t *dP){
 }
 
 //Kinda useless
