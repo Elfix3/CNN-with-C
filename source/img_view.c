@@ -165,5 +165,22 @@ void something(){
 
 }
 
+tensor4_t *init_tensor_from_batch(Image *batch, size_t idxStart, size_t nimages){
+    //put some random batch features as well :)
+    //pas oublier les labels
+    //data normalisation
 
+    tensor4_t *t = init_tensor4(IMG_DIM,IMG_DIM, 3, nimages, NOFILL);
+    //assert(0);
+    for(size_t i = 0;  i<nimages; i++){
+        size_t offset = i*t->strides[3];
+        const unsigned char *src = &batch[i].pixels[0][0];
+        for(size_t j = 0; j<t->strides[3]; j++){
+            t->datas[offset + j] = ((float)src[j]-127.5)/(127.5f);
 
+        } 
+    }
+    
+    
+    return t;
+}

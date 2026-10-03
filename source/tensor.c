@@ -81,26 +81,7 @@ void free_tensor4(tensor4_t **T){
     *T = NULL;
 }
 
-tensor4_t *init_tensor_from_batch(Image *batch, size_t idxStart, size_t nimages){
-    //put some random batch features as well :)
-    //pas oublier les labels
-    //data normalisation
 
-    tensor4_t *t = init_tensor4(IMG_DIM,IMG_DIM, 3, nimages, NOFILL);
-    //assert(0);
-    for(size_t i = 0;  i<nimages; i++){
-        size_t offset = i*t->strides[3];
-        LOG_INFO("Offset %zu", offset);
-        const unsigned char *src = &batch[i].pixels[0][0];
-        for(size_t j = 0; j<t->strides[3]; j++){
-            t->datas[offset + j] = ((float)src[j]-127.5)/(127.5f);
-
-        } 
-    }
-    
-    
-    return t;
-}
 
 
 void print_tensor4_shape(const tensor4_t *T){
@@ -166,8 +147,78 @@ uint8_t compareTensor4(const tensor4_t *T1, const tensor4_t *T2){
     return 0;
 }
 
-void convBuffer(const tensor4_t *X, const float *dataX, const tensor4_t *K, const float *dataK, const tensor4_t *Z, float *dataZ, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right)
-{
+//A UTILISER DANS LES FONCTIONS DE CONV (BASEES SUR CUMUL POUR RAPPEL) oui mais si le biais est ajouté avant ca passe nan ?
+void reset_t4(tensor4_t *T){    
+    REQUIRE(T != NULL && T->datas != NULL, "Error NULL input");
+
+    size_t numChunks = (size_t)omp_get_max_threads();
+    size_t numValsPchunk = T->flatten_size / numChunks;
+    size_t remainder = T->flatten_size % numChunks;
+
+    //Parallelized reset
+    if (T->flatten_size >= 64){
+        #pragma omp parallel for
+        for(int i = 0; i < (int)numChunks; i++){ 
+            memset(T->datas + i*numValsPchunk, 0, numValsPchunk*sizeof(float));
+        }
+        if (remainder > 0){
+            memset(T->datas + numChunks*numValsPchunk, 0, remainder*sizeof(float));
+        }
+    } else {
+        memset(T->datas, 0, sizeof(float) * T->flatten_size);
+    }
+}
+
+void checkT2(const tensor2_t *T){
+    REQUIRE(((tensor4_t*)T)->nmap == 1 && ((tensor4_t*)T)->nbatch == 1,"Error T2 should have only col and row dimension");
+}
+
+void allocMatMult(const tensor2_t *X, const tensor2_t *W, tensor2_t **Z){
+    // HORRIBLE MAIS ON DEVELOPPE LES ALGOS DABORD
+    REQUIRE(X != NULL, "Null X tensor");
+    REQUIRE(W != NULL, "Null W tensor");
+    REQUIRE(Z != NULL, "Null Z tensor");
+
+    checkT2(X);
+    checkT2(W);
+
+    if(*(Z) == NULL){
+        (*Z) = (tensor2_t*)init_tensor4(X->col, W->row,1,1,NOFILL);
+    }
+    //printf("%zu %zu\n",(*Z)->col, (*Z)->row);
+    checkT2(*Z);
+}
+
+
+void matmult(const tensor2_t *X, const tensor2_t *W, tensor2_t *Z){
+    REQUIRE(X->row == W->col, "Dimensions of matmult X W dont match");
+    REQUIRE(X->col == Z->col && W->row == Z->row, "Error output Z has wrong dimensions"); //Ca se duplique c'est moche 
+    
+    //flip les dimensiosn pour avoir du contigu sur les 2 tenseurs ??
+
+    //Itère sur les rows
+
+    #pragma omp parallel for
+    for(size_t i = 0; i < Z->row; i++){
+        size_t strideZ = i*Z->strides[1];
+
+        for(size_t j = 0; j < Z->col; j++) Z->datas[strideZ + j*Z->strides[0]] = 0.0f;
+
+        for(size_t k = 0; k < W->col; k++){
+            float w_ik = W->datas[i*W->strides[1] + k*W->strides[0]];
+
+            size_t strideX = k*X->strides[1];
+
+            for(size_t j = 0; j < Z->col; j++){
+                Z->datas[strideZ + j*Z->strides[0]] += w_ik * X->datas[strideX + j*X->strides[0]];
+            }
+        }
+    }
+
+}
+
+void convBuffer(const tensor4_t *X, const float *restrict dataX, const tensor4_t *K, const float *restrict dataK, const tensor4_t *restrict Z,
+    float *dataZ, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right) {
 
     //TENSOR Z ALREADY ALLOCATED
     REQUIRE(Z != NULL,"Z output of convBuffer not allocated");
@@ -186,17 +237,16 @@ void convBuffer(const tensor4_t *X, const float *dataX, const tensor4_t *K, cons
             size_t cKStart = MAX(0,cKlow);
             size_t cKEnd   = MIN(K->shape[0], (size_t)MAX(0, cKhigh));  
             
-            
             float acc = 0.0f;
 
             for(size_t rK = rKStart; rK < rKEnd; rK++){
                 size_t rX = rK + rZ - pad_top;
+
+                const float *Krow = dataK + rK*K->strides[1];
+                const float *Xrow = dataX + rX*X->strides[1];
                 for(size_t cK = cKStart; cK < cKEnd ; cK++){
                     size_t cX = cK + cZ - pad_left;
-                    
-                    //Optimiser les accès
-                    //acc += get_t4_val(K,cK,rK,0,0)* get_t4_val(X,cX,rX,0,0);
-                    acc +=dataK[cK+ rK*K->strides[1]]*dataX[cX + rX*X->strides[1]];
+                    acc +=Krow[cK]*Xrow[cX];
                 }
             }
             dataZ[cZ + rZ*Z->strides[1]] += acc;
@@ -206,12 +256,8 @@ void convBuffer(const tensor4_t *X, const float *dataX, const tensor4_t *K, cons
     }
 }
 
-void addBias(tensor4_t *t, const float *b){
-    // ??
-}
 
 void ReLU(tensor4_t *T){
-    //Throw some pragma tard
     REQUIRE(T != NULL, "Input tensor ptr is NULL");
     
     #pragma omp parallel for
@@ -650,12 +696,32 @@ void kernelFlipThreaded(const tensor4_t *K, tensor4_t **Kflipped){
     }
 }
 
-//A TESTER
-void setBias(tensor4_t *Z, float *b){
-    REQUIRE(Z != NULL, "Input ptr Z cannoc be NULL");
+//A TESTER très bof perfomance wise, on enleve aucun gain en threaded
+void setBiasThreaded(tensor4_t *Z, const float *b){
+    REQUIRE(Z != NULL, "Input ptr Z cannot be NULL");
+    REQUIRE(b != NULL, "b pointers unitialized");
+    
+    #pragma omp parallel for collapse(2)
+    for(size_t nb = 0; nb <Z->nbatch; nb++){
+        size_t ZStrideBatch = nb*Z->strides[3];
+        
+        for(size_t m = 0; m<Z->nmap; m++){
+            size_t ZStrideFilter = m*Z->strides[2];
+
+            for(size_t i = 0; i< Z->strides[2]; i++){
+                Z->datas[ZStrideBatch+ZStrideFilter+i] = b[m];
+            }
+
+        }
+    }
+
+}
+
+
+void setBias(tensor4_t *Z, const float *b){
+    REQUIRE(Z != NULL, "Input ptr Z cannot be NULL");
     REQUIRE(b != NULL, "b pointers unitialized");
 
-    //Non thread friendly
     size_t idZ = 0;
     for(size_t nb = 0; nb <Z->nbatch; nb++){
         for(size_t m = 0; m<Z->nmap; m++){
@@ -668,7 +734,6 @@ void setBias(tensor4_t *Z, float *b){
     }
 
 }
-
 //######################################
 //######## TRAVAIL TEMPORAIRE #########
 //######################################

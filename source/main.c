@@ -22,225 +22,6 @@ int main(int argc, char **argv){
     
 
     //-------------------------------------//
-    //-----     FORWARD IN LAYER      -----//
-    //-------------------------------------//
-
-    //----> INPUT
-    /* tensor4_t *X = init_tensor4(5,5,4,2,UNIFORM);
-    
-    //----> LAYER
-    ConvLayer *l = init_conv_layer(3,4,3,SAME);
-    
-    LOG_INFO("Input X :");
-    print_tensor4_shape(X);
-    print_tensor4_data(X);
-    LOG_INFO("Layer Kernels :");
-    print_tensor4_shape(l->K);
-    print_tensor4_data(l->K);
-
-    forward(l, X);
-
-    LOG_INFO("OUTPUT :"); */
-    //print_tensor4_data(l->A);
-    //print_tensor4_shape(l->A);
-
-    //-------------------------------------//
-    //-----     TEST FOR POOLING      -----//
-    //-------------------------------------//
-
-    /* tensor4_t *A = init_tensor4(4,4,1,1,UNIFORM);
-    tensor4_t *P = NULL;
-    uint8_t *Pooling_Mask = NULL;
-
-    MaxPool(A,&P,&Pooling_Mask);
-    printf("A : \n");
-    print_tensor4_data(A);
-
-    printf("P : \n");
-    print_tensor4_data(P);
-
-    printf("Masque : \n");
-    print_tensor4_mask(Pooling_Mask,A); */
-
-
-    //-------------------------------------//
-    //-----     TEST FOR MATVEC       -----//
-    //-------------------------------------//
-
-    /* float X[] = {-1.777, 3.0, 1.0, 2.3};            //n = 4
-    
-    tensor4_t *W = init_tensor4(4,3,1,1,UNIFORM);
-    
-    print_tensor4_data(W);
-    float *Z = NULL;
-  
-    matvec(X,W,&Z);
-    for(size_t i = 0; i< W->shape[1];i++){
-        printf("%.3f \n",Z[i]);
-    } */
-
-    //-------------------------------------//
-    //---   TEST FOR MATVEC PARALLEL    ---//
-    //-------------------------------------//
-
-    /* size_t n = 100000;
-    size_t m = 100000;
-
-    //INPUT X
-    float *X = malloc(sizeof(float)*n);
-    
-    double start;
-    double end;
-    for(size_t i = 0; i < n; i++){X[i] = ((float)rand()/(float)RAND_MAX)-0.5;}
-    
-    
-    //INPUT W
-    tensor4_t *W = init_tensor4(n,m,1,1,NOFILL);
-
-    //OUTPUT Z
-    float *Z = NULL;
-
-    start = omp_get_wtime();
-    matvec(X,W,&Z);
-    end = omp_get_wtime();
-    printf("Temps : %f secondes\n", end - start);
- */
-
-    //-------------------------------------//
-    //-----     TEST FOR NEWCONV      -----//
-    //-------------------------------------//
-    /* 
-    tensor4_t *X = init_tensor4(4,4,2,1, UNIFORM);
-    tensor4_t *K = init_tensor4(2,2,2,2,UNIFORM);
-    tensor4_t *Z = NULL;
-    allocZ(X,K,&Z,SAME);
-    
-    
-    //tensor4_t *ZZ;
-    printf("\n\n########\tInput Tensor X :\t########\n\n");
-    print_tensor4_data(X);
-    printf("\n\n########\tKernel K :\t########\n\n");
-    print_tensor4_data(K);
-    
-    //double start = omp_get_wtime();
-
-    
-    convBuffer(X,X->datas,
-                K, K->datas,
-                Z,Z->datas,
-                1,0,1,0);
-
-    print_tensor4_data(Z);     
-        assert(0); */
-    //Marche en ajoutant les strides !!
-    /* convBuffer(X,(X->datas + X->strides[2]),
-                K, (K->datas + K->strides[2]),
-                Z, (Z->datas + Z->strides[2]),
-                1,0,1,0);
- */
-    
-    //double end = omp_get_wtime();
-    //printf("Time diff : %.7f\n",end-start);
-    /* printf("\n\n########\tOutput tensor Z :\t########\n\n");
-    print_tensor4_data(Z);
-    
-    tensor4_t *PoolX  = NULL;
-    uint8_t *Pmask = NULL;
-    MaxPool(Z,&PoolX,&Pmask); */
-    //print_tensor4_data(PoolX);
-    
-    //print_tensor4_data(ZZ);
-
-    //convNew(X,K,&Z,1,1,1,1);
-    //print_tensor4_data(Z);
-
-    //convNew(X,K,&Z,2,2,2,2);
-    //print_tensor4_data(Z);
-
-
-
-    /* convNew(X,K,&Z,1,0,1,0);
-    print_tensor4_data(Z);
-
-    convNew(X,K,&Z,0,1,0,1);
-    print_tensor4_data(Z);
-
-
-    convNew(X,K,&Z,1,1,1,1);
-    print_tensor4_data(Z); */
-
-
-    //-------------------------------------//
-    //-----     TEST FOR CONV4        -----//
-    //-------------------------------------//
-
-    /* tensor4_t *X = init_tensor4(5,5,3,5, UNIFORM);      //<---INPUT
-    tensor4_t *K = init_tensor4(3,3,3,2, UNIFORM);      //<---KERNELS
-    
-
-    tensor4_t *Z = NULL;                                //<---OUTPUT, should be 3*3*2*5
-    free_tensor4(&Z);
-    LOG("Tensor X :");
-    print_tensor4_data(X);
-    LOG("Tensor K :");
-    print_tensor4_data(K);
-    
-    allocZ(X,K,&Z,VALID);
-    
-    conv4(X,K,&Z,VALID);
-    
-    LOG("Tensor Z Shape :");
-    print_tensor4_shape(Z);
-
-    LOG("Tensor Z :");
-    print_tensor4_data(Z); */
-
-
-    //-------------------------------------//
-    //-----     TEST FOR CONV4        -----//
-    //-------------------------------------//
-    /* tensor4_t *K = init_tensor4(3,3,3,2, UNIFORM);
-    LOG_INFO("K tensor :");
-    print_tensor4_data(K);
-
-    tensor4_t *KFlip = NULL;    
-    
-    kernelFlip(K,&KFlip);
-
-    
-    LOG_INFO("K flipped :");
-    print_tensor4_data(KFlip); */
-    
-    //-------------------------------------//
-    //-----    TEST FOR IMG VIEWER    -----//
-    //-------------------------------------//
-
-    //debug_show_image(r_channel, g_channel, b_channel, "input_batch_3_img_7");
-   /*  load_CIFAR_Single_Batch("data_batch_2.bin");
-    load_CIFAR();
-    //load_CIFAR();
-
-    for(int i = 122; i < 122+6; i++){
-        show_image(batch1,i);
-    } */
-
-    /* show_image(batch2,8954);
-    show_image(batch3,8856);
-    show_image(batch4,8123);
-    show_image(batch5,8442);
-    show_image(test,7321); */
-
-
-    //-------------------------------------//
-    //----   LOAD TENSOR FROM BATCH    ----//
-    //-------------------------------------//
-    /* load_CIFAR();
-    tensor4_t *t = init_tensor_from_batch(batch1,0,1);
-    print_tensor4_data(t); */
-
-
-
-    //-------------------------------------//
     //----      MAXPOOL THREADED       ----//
     //-------------------------------------//
     /* tensor4_t *t = init_tensor4(5,5,2,2,UNIFORM);
@@ -408,6 +189,75 @@ int main(int argc, char **argv){
         LOG_COLOR(GREEN,"OK tensors are the same");
     } */
 
+
+    //-------------------------------------//
+    //----     Threaded setBias        ----//
+    //-------------------------------------//
+    /* tensor4_t *Z = init_tensor4(128,128,64,64,UNIFORM);
+    tensor4_t *Zother = init_tensor4(128,128,64,64,UNIFORM);
+    float *b = malloc(sizeof(float)*64*64);
+
+    for(size_t i = 0; i <64*64; i++){
+        b[i] = 6.0f;
+    }
+    
+    double start = omp_get_wtime();
+    setBias(Z,b);
+    double end = omp_get_wtime();
+    printf("Non threaded time : %.6f\n",end-start);
+
+    double nstart = omp_get_wtime();
+    setBiasThreaded(Zother,b);
+    double nend = omp_get_wtime();
+    printf("Threaded time : %.6f\n",nend-nstart);
+
+    //print_tensor4_data(Zother);
+
+    //print_tensor4_data(Z);
+    if(compareTensor4(Z, Zother)){
+        LOG_COLOR(RED,"Error Different tensors");
+    } else {
+        LOG_COLOR(GREEN,"OK tensors are the same");
+    } */
+
+    //-------------------------------------//
+    //----        RESET TENSOR 4       ----//
+    //-------------------------------------//
+
+    /* tensor4_t *T = init_tensor4(128,128,256,256,NOFILL);
+    //print_tensor4_data(T);
+    double nstart = omp_get_wtime();
+    reset_t4(T);
+    double nend = omp_get_wtime();
+    //print_tensor4_data(T);
+    printf("Non threaded : %.6f\n",nend-nstart); */
+
+    //-------------------------------------//
+    //----       MATMULT TENSOR 2      ----//
+    //-------------------------------------//
+    tensor2_t *X = (tensor2_t*)init_tensor4(1024,1024,1,1,UNIFORM);
+    tensor2_t *W = (tensor2_t*)init_tensor4(1024,1024,1,1,UNIFORM);
+    
+    tensor2_t *Z = NULL;
+    allocMatMult(X,W,&Z);
+    
+    double nstart = omp_get_wtime();
+    matmult(X,W,Z);
+    double nend= omp_get_wtime();
+    printf("Non threaded : %.6f\n",nend-nstart); 
+
+/* 
+    LOG_INFO("X input :");
+    print_tensor4_data((tensor4_t*)X);
+
+    LOG_INFO("W input :");
+    print_tensor4_data((tensor4_t*)W);
+
+    
+
+    LOG_INFO("Z output W*X");
+    print_tensor4_data((tensor4_t*)Z); */
+    
     //assert(0);
     return 0;
 }

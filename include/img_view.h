@@ -5,9 +5,10 @@
 #include "stdlib.h"
 #include "string.h"
 #include "debug.h"
+#include "tensor.h"
 
 #define IMG_DIM         32
-#define IMG_SIZE        IMG_DIM*IMG_DIM
+#define IMG_SIZE        ((IMG_DIM)*(IMG_DIM))
 #define IMG_PBATCH      10000
 
 #define DATASETDIR      "cifar-10-binary"
@@ -41,10 +42,8 @@ void clear_CIFAR();
 //show an image and print its info
 void show_image(Image *batch, size_t index);
 
-
-//----------------------------------//            
-//---       OLD TO DELETE        ---//
-//----------------------------------//
+//fonction d'init de tenseur à partir du batch à déplacer ici
+tensor4_t* init_tensor_from_batch(Image *batch, size_t idxStart, size_t nimages);
 
 void something();
 void debug_show_image(unsigned char *r, unsigned char *g, unsigned char *b, const char *label);

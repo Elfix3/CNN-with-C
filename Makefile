@@ -1,11 +1,13 @@
-# === Configuration ===
-CC       := gcc
-CFLAGS   := -Wall -Wextra -std=c11 -Iinclude -fopenmp -O3
-LDFLAGS  := -fopenmp
-
 SRC_DIR   := source
 INC_DIR   := include
 BUILD_DIR := build
+
+# === Configuration ===
+CC       := gcc
+CFLAGS   := -Wall -Wextra -std=c11 -I$(INC_DIR) -fopenmp -O3
+LDFLAGS  := -fopenmp
+
+
 
 TARGET := programme.exe
 

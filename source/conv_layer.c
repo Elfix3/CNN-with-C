@@ -59,23 +59,26 @@ void clean_conv_layer(ConvLayer *l){
 
 }
 
-void forward(ConvLayer *l, const tensor4_t *X){
+void forward_conv(ConvLayer *l, const tensor4_t *X){
     
     REQUIRE(l != NULL,"Layer cannot be NULL");
     REQUIRE(X != NULL,"Input X cannot be NULL");
-
-    //A terme possibilité de réallouer les Kernels ?? (Franchement mauvaise idée)
     REQUIRE(l->K->nmap == X->nmap, "Feature map number must match between Input X and kernel K"); 
+
+    //A terme possibilité de réallouer les Kernels ?? (Franchement mauvaise idée) (on enlève définitivement)
     
     //Sets the input pointer, not owned
     l->X = X;
 
-    //Allocates the output tensor
+    //RESETS THE TENSOR : LIKE CLEAN IT, hold up, setbias does the job !! false alert
+
+    //Allocates the output tensor               (Va être déplacé dans le cstr)
     allocZ(l->X,l->K,&l->A,l->padding);
     
     setBias(l->A,l->b);
     //print_tensor4_data(l->A);
     
+    //pas besoin de reset grâce au biais
     conv4threaded(l->X,l->K, l->A, l->padding);
     //conv4(l->X,l->K, l->A, l->padding);
     //print_tensor4_data(l->A);
@@ -83,82 +86,10 @@ void forward(ConvLayer *l, const tensor4_t *X){
     ReLU(l->A);
     //print_tensor4_data(l->A);
 
+    //Allocates the output pooled tensor               (Va être déplacé dans le cstr)
     allocP(l->A, &l->P, &l->Pooling_Mask);
-    LOG_INFO("MAX POOL :");
-    
-    printf("%.3f %.3f %.3f %.3f\n",l->A->datas[0],l->A->datas[1],l->A->datas[3],l->A->datas[3]);
-    
     MaxPoolThreaded(l->A, l->P, l->Pooling_Mask);
-    //print_tensor4_data(l->P);
     
-    //print_tensor4_mask(l->Pooling_Mask, l->A);
-    //add bias before;
-    //conv4(l->X, l->K, &l->A, l->padding);
-    
-    //--->  TIME METRICS
-    
-    
-    //Allouer l->Z
-    
-    
-    //double start = omp_get_wtime();
-    
-    
-    //conv_cumulate(X,l->K,l->padding_type,&l->A);
-
-    
-
-    
-    //addBias(l->A,l->b);
-    //printf("\n\n Valeur post biais : \n\n");
-    //print_tensor4_data(l->A);
-
-
-    //ReLU(l->A->datas,l->A->flatten_size);
-    //printf("\n\n Valeur post ReLU : \n\n");
-    //print_tensor4_data(l->A);
-    
-    //MaxPool(l->A,&l->P,&l->Pooling_Mask);
-    //printf("\n\n  Valeur post Pooling : \n\n");
-    //print_tensor4_data(l->P);
-    
-    //printf("\n\n  Valeur masque pooling : \n\n");
-    //print_tensor4_mask(l->Pooling_Mask, l->A);
-    //printf("\n\n<--- CONV RESULT --->\n\n");
-    //print_tensor4_data(l->A);
-    
-    
-
-    
-    //printf("\n\n<---  BIAS ADDED --->\n\n");
-    //print_tensor4_data(l->A);
-    
-     
-    
-
-    //--->  TIME METRICS
-    //double end = omp_get_wtime();
-    //printf("Temps : %f secondes\n", end - start);
-    
-    //printf("\n\n<---  RELU --->\n\n");
-    //print_tensor4_data(l->A);
-
-
-    //LOG("Conv output :");
-    
-
-    /* size_t convd0 =conv_output->shape[0];
-    size_t convd1 =conv_output->shape[1];
-    size_t convd2 =conv_output->shape[2]; */
-
-    //print_mask(l->ReLUMask,convd0,convd1,convd2);
-
-    //printf("Pooling :\n");
-    //MaxPool(conv_output,(mask_4t));
-    //print_tensor4_data(conv_output);
-    //print_mask(l->Pooling_Mask,convd0,convd1,convd2);
-
-    //l->P = conv_output;
 }
 
 void backward(ConvLayer *l, const tensor4_t *dP){

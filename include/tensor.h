@@ -11,7 +11,7 @@
 
 //My includes :
 #include "debug.h"
-#include "img_view.h"
+
 
 //<-----    fan_in is :     size_kernel * size_kernel * n_channels        ------>
 #define         HE_LIMIT(fan_in)            (sqrt(6.0 / (double)(fan_in)))
@@ -51,6 +51,15 @@ typedef struct{
     float *datas;
 } tensor4_t;
 
+//----------------------------------//             
+//---           TENSOR 2         ---//
+//----------------------------------//
+typedef struct {
+    tensor4_t; // membre sans nom
+} tensor2_t;
+
+
+
 //----------------------------------//            
 //---       init and free        ---//
 //----------------------------------//
@@ -58,9 +67,6 @@ typedef struct{
 //** Col, row, n_fmap, n_filter */
 tensor4_t* init_tensor4(size_t d0, size_t d1, size_t d2, size_t d3, distribution_t type);
 void free_tensor4(tensor4_t **t);
-
-//Allocates and fills a tensor with batch
-tensor4_t* init_tensor_from_batch(Image *batch, size_t idxStart, size_t nimages);
 
 
 //----------------------------------//            
@@ -90,39 +96,63 @@ void print_tensor4_shape(const tensor4_t *T);
 void print_tensor4_data(const tensor4_t *T);
 void print_tensor4_mask(const uint8_t *mask, const tensor4_t *A);
 
+//Compare
+uint8_t compareTensor4(const tensor4_t *T1, const tensor4_t *T2);
+
+//Resets tensor
+void reset_t4(tensor4_t *T);
 
 
 //----------------------------------//            
-//---         Operation          ---//
+//---        Operation T2        ---//
+//----------------------------------//
+void checkT2(const tensor2_t *T);
+
+//Fonction d'alloc ??
+void allocMatMult(const tensor2_t *X, const tensor2_t *W, tensor2_t **Z);
+
+void matmult(const tensor2_t *X, const tensor2_t *W, tensor2_t *Z); //et l'output connard ?
+
+
+//matmult(const tensor2_t *X, )
+
+//----------------------------------//            
+//---        Operation T4        ---//
 //----------------------------------//
 //Generic convolution function
 //void convbuffer(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right);
 
-uint8_t compareTensor4(const tensor4_t *T1, const tensor4_t *T2);
 
 //Optimised convolution of dataX with dataK (tensor pointers are just to give the information dimension)
-void convBuffer(const tensor4_t *X, const float *dataX,
-                const tensor4_t *K, const float *dataK,
-                const tensor4_t *Z, float *dataZ,
+void convBuffer(const tensor4_t *X, const float *restrict dataX,
+                const tensor4_t *K, const float *restrict dataK,
+                const tensor4_t *Z, float *restrict dataZ,
                 size_t pad_top, size_t pad_bottom, size_t pad_left, size_t pad_right);
 
 
                 //Optimised convolution of dataX with dataK (tensor pointers are just to give the information dimension)
 //convolution of a tensor X with a tensor K
+
+//To delete
 void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t *Z, padding_t padding);
+
 //threaded version (will replace the previous)
 void conv4threaded(const tensor4_t *X, const tensor4_t *K, tensor4_t *Z, padding_t padding);
 
 
-//Kernel Flip
+//To Delete
 void kernelFlip(const tensor4_t *K, tensor4_t **Kflipped);
 
+//threaded version (will replace the previous)
 void kernelFlipThreaded(const tensor4_t *K, tensor4_t **Kflipped);
 
 //sets the bias
-void setBias(tensor4_t *Z, float *b);
+void setBias(tensor4_t *Z, const float *b);
 
-//Performs ReLU
+//Threaded version slightly slower, will not be used
+void setBiasThreaded(tensor4_t *Z,const float *b);
+
+//Performs ReLU (easy peasy threaded squeezy)
 void ReLU(tensor4_t *T);
 
 //X is the input, K the parameters, type padding type and Z the output parameter
