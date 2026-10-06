@@ -81,12 +81,19 @@ void free_tensor4(tensor4_t **T){
     *T = NULL;
 }
 
+tensor4_dim_t get_t4_dim(const tensor4_t *T){
+    return T->dim;
+}
 
-
+void print_t4_dim(const tensor4_dim_t *tdim){
+    REQUIRE(tdim != NULL, "NULL t4dim");
+    LOG_INFO("Dimensions (%zu, %zu, %zu, %zu)",tdim->col, tdim->row, tdim->nmap, tdim->nbatch);
+    
+}
 
 void print_tensor4_shape(const tensor4_t *T){
     REQUIRE(T != NULL, "Tensor cannot be NULL");
-    printf("(%zu, %zu, %zu, %zu) : (Cols, Rows, Nfmap, Nbatch/NFilter)\n",T->shape[0],T->shape[1],T->shape[2],T->shape[3]);
+    LOG_INFO("(%zu, %zu, %zu, %zu) : (Cols, Rows, Nfmap, Nbatch/NFilter)\n",T->col,T->row,T->nmap,T->nbatch);
 }
 
 void print_tensor4_data(const tensor4_t *T){

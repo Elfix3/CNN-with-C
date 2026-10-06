@@ -13,89 +13,6 @@ static inline size_t maxindex4(float a, float b, float c, float d, size_t idxa,s
     return (max_ab >= max_cd) ? idx_ab : idx_cd;
 }
 
-
-void allocZ(const tensor4_t *X, const tensor4_t *K, tensor4_t **Z, padding_t padding){
-
-    REQUIRE(X != NULL, "Tensor X ptr is NULL");
-    REQUIRE(K != NULL, "Tensor K ptr is NULL");
-    REQUIRE(Z != NULL, "Tensor Z ptr is NULL");
-
-    size_t Z_cols, Z_rows, Z_nmaps, Z_batch;
-
-    switch (padding){
-    case SAME :
-        Z_cols = X->shape[0];
-        Z_rows = X->shape[1];
- 
-    break;
-    case VALID :
-        assert(X->shape[0] >= K->shape[0] &&"Error, kernel too wide for a VALID conv");
-        assert(X->shape[1] >= K->shape[1] && "Error, kernel too long for a VALID conv");
-        Z_cols = X->shape[0] - K->shape[0] + 1;
-        Z_rows = X->shape[1] - K->shape[1] + 1;
-    break;
-    case FULL :
-        Z_cols = X->shape[0] + K->shape[0] - 1;
-        Z_rows = X->shape[1] + K->shape[1] - 1;
-    break;
-
-    default:
-        assert(0 && "Error: invalid padding mode");
-        break;
-    }
-    Z_nmaps = K->nbatch;
-    Z_batch = X->nbatch;
-    //printf("%zu %zu %zu %zu\n",Z_cols,Z_rows,K->nbatch,X->nbatch);
-    
-    
-    uint8_t needs_alloc  = 0;
-
-    if(*(Z) == NULL){
-        needs_alloc = 1;
-    } else if(Z_cols != (*Z)->col || Z_rows != (*Z)->row || Z_nmaps != (*Z)->nmap || Z_batch != (*Z)->nbatch){
-        free_tensor4(Z);
-        needs_alloc = 1;
-    }
-
-    if(needs_alloc){
-        LOG_VERBOSE("New allocation");
-        (*Z) = (tensor4_t*)init_tensor4(Z_cols,Z_rows,K->shape[3],X->shape[3],ZEROS);
-    } else {
-        LOG_VERBOSE("Previous allocation keeped");
-    }
-}
-
-void allocP(const tensor4_t *A, tensor4_t **P, uint8_t **Pooling_Mask){
-    REQUIRE(A != NULL, "Tensor A ptr is NULL");
-    REQUIRE(P != NULL, "Tensor P ptr is NULL");
-    REQUIRE(Pooling_Mask != NULL, "Mask is NULL");
-
-    size_t P_cols = (A->col+1) /2;
-    size_t P_rows = (A->row+1) /2;
-
-    uint8_t needs_alloc  = 0;
-
-    if(*(P) == NULL){
-        needs_alloc = 1;
-    } else {
-        uint8_t dimensionChanged = ((*P)->shape[0] != P_cols)|| (*P)->shape[1] != P_rows ||
-        (*P)->nmap != A->nmap || (*P)->nbatch != A->nbatch;
-        if(dimensionChanged){
-            needs_alloc = 1;
-            free_tensor4(P);
-        }
-    }
-    
-    if(needs_alloc){
-        LOG_VERBOSE("New allocation");
-        (*P) = (tensor4_t*)init_tensor4(P_cols,P_rows,A->nmap,A->nbatch,ZEROS);
-        (*Pooling_Mask) = calloc(A->flatten_size, sizeof(uint8_t));
-    } else {
-        LOG_VERBOSE("Previous allocation keeped");
-    }
-
-}
-
 void getPadding(size_t *t, size_t *b, size_t *l, size_t *r, const tensor4_t *K, padding_t padding){
     
     REQUIRE(K != NULL, "Tensor K ptr is NULL");
@@ -160,8 +77,8 @@ void conv4(const tensor4_t *X, const tensor4_t *K, tensor4_t *Z, padding_t paddi
     assert(K != NULL && "Error during conv cumulate : NULL K");
     assert(Z != NULL && "Error during conv cumulate : NULL Z");
 
-    //TODO calculer les offset en fonction du padding
-    
+
+    //          /!\ pas de vérif des bornes correctes ??
     
     size_t pad_top, pad_bottom, pad_left, pad_right;
     getPadding(&pad_top, &pad_bottom, &pad_left, &pad_right,K,padding);
@@ -214,6 +131,39 @@ void setBias(tensor4_t *Z, const float *b){
         }
     }
 
+}
+
+
+//Faire dépendre des dimensions de K plutôt ?
+tensor4_dim_t get_conv_output_dim(tensor4_dim_t X_dim, tensor4_dim_t K_dim, padding_t pad){
+    tensor4_dim_t A_dim = { .nmap = K_dim.nfilter, .nbatch = X_dim.nbatch };
+
+    switch (pad) {
+    case SAME:
+        A_dim.col = X_dim.col;
+        A_dim.row = X_dim.row;
+        break;
+    case VALID:
+        REQUIRE(X_dim.col >= K_dim.col && X_dim.row >= K_dim.row, "Kernel too large for VALID conv");
+        A_dim.col = X_dim.col - K_dim.col + 1;
+        A_dim.row = X_dim.row - K_dim.row + 1;
+        break;
+    case FULL:
+        A_dim.col = X_dim.col + K_dim.col - 1;
+        A_dim.row = X_dim.row + K_dim.row - 1;
+        break;
+    default:
+        LOG_ERROR("Incorrect padding");
+    }
+
+    return A_dim;
+}
+
+tensor4_dim_t get_maxpool_output_dim(tensor4_dim_t A_dim){
+    tensor4_dim_t P_dim = {.col = (A_dim.row+1)/2, .row = (A_dim.row+1)/2,
+        .nmap = A_dim.nmap, .nbatch = A_dim.nbatch};
+    
+    return P_dim;
 }
 
 void kernelFlip(const tensor4_t *K, tensor4_t **Kflipped){

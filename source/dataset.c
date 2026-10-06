@@ -104,6 +104,8 @@ void show_image(Image *batch, size_t index){
     FILE *f = fopen("debug_cifar.ppm", "wb");
     if (!f) { perror("fopen"); return; }
 
+    REQUIRE(index<10000, "Out of range");
+    
     fprintf(f, "P6\n%d %d\n255\n", IMG_DIM, IMG_DIM);
     for (int i = 0; i < IMG_SIZE; i++) {
         fputc(batch[index].pixels[0][i], f);
@@ -117,52 +119,6 @@ void show_image(Image *batch, size_t index){
     snprintf(cmd, sizeof(cmd), "i_view64.exe %s", "debug_cifar.ppm");
     LOG_INFO("%s",classes[batch[index].label]);
     system(cmd);
-}
-
-
-//----------------------------------//            
-//---       OLD TO DELETE        ---//
-//----------------------------------//
-
-void debug_show_image(unsigned char *r, unsigned char *g, unsigned char *b, const char *label){
-    FILE *f = fopen("debug_cifar.ppm", "wb");
-    if (!f) { perror("fopen"); return; }
-
-    fprintf(f, "P6\n%d %d\n255\n", IMG_DIM, IMG_DIM);
-
-
-    for (int i = 0; i < IMG_SIZE; i++) {
-        fputc(r[i], f);
-        fputc(g[i], f);
-        fputc(b[i], f);
-    }
-
-    fclose(f);
-
-    
-    char cmd[256];
-    snprintf(cmd, sizeof(cmd), "i_view64.exe %s", "debug_cifar.ppm");
-    printf("%s\n",cmd);
-    system(cmd);
-}
-
-void something(){
-    FILE *p;
-    unsigned char red[IMG_SIZE];
-    unsigned char green[IMG_SIZE];
-    unsigned char blue[IMG_SIZE];
-
-
-    p = fopen("cifar-10-binary/data_batch_1.bin","rb");
-    unsigned char label;
-    fread(&label, 1, 1, p);   // consomme le label
-
-    fread(red,sizeof(red),1,p);
-    fread(green,sizeof(green),1,p);
-    fread(blue,sizeof(blue),1,p);
-    
-    debug_show_image(red, green, blue, "Prout");    
-
 }
 
 tensor4_t *init_tensor_from_batch(Image *batch, size_t idxStart, size_t nimages){

@@ -28,15 +28,17 @@ typedef enum{
     NOFILL,         //When we need to allocate only
 } distribution_t;
 
-//Defines the padding type for convolutionnal operations
-typedef enum{
-    VALID,          //Shrinks the input dimension : size_input-size_kernel + 1 becomes the new output dimension : ex : 7*7 feature map convolution witha 3*3 kernel : 7 -3 + 1 = 5*5 output dimension
-    SAME,           //Preserves the input dimension
-    FULL            //Extends the input dimension
-} padding_t;
-
-
 //Tensor 4 used for : Kernels representation (All)
+typedef struct{
+    size_t col;
+    size_t row;
+    size_t nmap;
+
+    union {
+        size_t nfilter;
+        size_t nbatch;
+    };
+} tensor4_dim_t;
 
 //----------------------------------//             
 //---           TENSOR 4         ---//
@@ -44,7 +46,8 @@ typedef enum{
 typedef struct{
     size_t flatten_size;
     union {
-        struct{ size_t col; size_t row; size_t nmap; size_t nbatch;};       //<---For a Kernel or parameter tensor, nbatch actually represents the number of filter instead
+        tensor4_dim_t dim;
+        struct{ size_t col; size_t row; size_t nmap;  union {size_t nbatch; size_t nfilter;};};       //<---For a Kernel or parameter tensor, nbatch actually represents the number of filter instead
         size_t shape[4];
     };
     size_t strides[4];
@@ -64,6 +67,7 @@ typedef struct {
 //----------------------------------//
 
 //** Col, row, n_fmap, n_filter */
+//Version avec la structure aussi ?
 tensor4_t* init_tensor4(size_t d0, size_t d1, size_t d2, size_t d3, distribution_t type);
 void free_tensor4(tensor4_t **t);
 
@@ -84,6 +88,14 @@ return t->datas[get_t4_idx(t,idx0,idx1,idx2,idx3)];}
 static inline void set_t4_val(const tensor4_t *t, float val, size_t idx0, size_t idx1, size_t idx2, size_t idx3){
 t->datas[get_t4_idx(t,idx0,idx1,idx2,idx3)] = val;}
 
+
+//Tensor dim operation
+tensor4_dim_t get_t4_dim(const tensor4_t *T);
+
+//Print tensordim
+void print_t4_dim(const tensor4_dim_t *tdim);
+
+
 //----------------------------------//            
 //---           Display          ---//
 //----------------------------------//
@@ -98,7 +110,9 @@ uint8_t compareTensor4(const tensor4_t *T1, const tensor4_t *T2);
 //Resets tensor
 void reset_t4(tensor4_t *T);
 
+//well ok
 void checkT2(const tensor2_t *T);
+
 
 
 #endif

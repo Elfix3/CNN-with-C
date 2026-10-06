@@ -1,12 +1,43 @@
 #include "layers/conv_layer.h"
 
+static const char* padding_to_string(padding_t pad){
+    return padding_strings[pad];
+}
 
 
-ConvLayer *init_conv_layer(size_t kernel_size, size_t n_fmap, size_t n_filter, padding_t type){
+static tensor4_t* allocA(tensor4_dim_t in_dim, ConvLayer *l){
+    //Faire dépendre des dimensions de K plutôt
+    REQUIRE(l != NULL, "Error NULL layer");
+    REQUIRE(l->K != NULL, "Error K tensor in layer is NULL");
+    
+    tensor4_dim_t A_dim =  get_conv_output_dim(in_dim,l->K->dim,l->padding);
+
+    tensor4_t *A = (tensor4_t*)init_tensor4(A_dim.col, A_dim.row, A_dim.nmap, A_dim.nbatch, NOFILL);
+    
+    if(!A){
+        LOG_ERROR("Error bad alloc");
+    }
+    return A;
+}
+
+
+static tensor4_t* allocP(tensor4_dim_t A_dim){
+    tensor4_dim_t P_dim = get_maxpool_output_dim(A_dim);
+
+    tensor4_t *P = (tensor4_t*)init_tensor4(P_dim.col, P_dim.row, P_dim.nmap, P_dim.nbatch, NOFILL);
+
+    if(!P){
+        LOG_ERROR("Error bad alloc");
+    }
+    return P;
+
+}
+
+ConvLayer *init_conv_layerOld(size_t kernel_size, size_t n_fmap, size_t n_filter, padding_t type){
     ConvLayer *l = (ConvLayer*)malloc(sizeof(ConvLayer));
     
 
-    //-> Input 
+    /* //-> Input  Ca ok
     l->X = NULL;
     
     //-> Parameters
@@ -17,8 +48,12 @@ ConvLayer *init_conv_layer(size_t kernel_size, size_t n_fmap, size_t n_filter, p
     l->padding = type;
     
     //Back prop cache outputs
+
+    //allouer direct
     l->A = NULL;
-    l->Pooling_Mask = NULL;
+
+    //allouer direct
+    l->PoolingMask = NULL;
 
     //->Back prop cache gradients
     l->dK = NULL;
@@ -37,44 +72,104 @@ ConvLayer *init_conv_layer(size_t kernel_size, size_t n_fmap, size_t n_filter, p
     #if VERBOSE
         printf("Layer sucessfully created, tensor info :\n");
         print_tensor4_data(l->K);
-    #endif
+    #endif */
 
     return l;
 }
 
-void clean_conv_layer(ConvLayer *l){
+ConvLayer *init_conv_layer(init_conv_layer_parameter_t param){
+    ConvLayer *l = (ConvLayer*)malloc(sizeof(ConvLayer));
+    
+    l->input_shape = param.Input->dim;
+    l->X = NULL;
+    
+    l->padding = param.padding_type;
+
+    //Init K
+    l->K = init_tensor4(param.kernel_size, param.kernel_size, param.input_dimension.nmap, param.n_filter,UNIFORM);
+    
+    //Init b
+    l->b = calloc(param.n_filter,sizeof(float));  
+    
+    if(l->b == NULL){
+        LOG_ERROR("Error during bias initalization");
+    }
+
+    //faut check les ptr
+    l->A = allocA(param.input_dimension, l);
+    l->P = allocP(l->A->dim);
+
+    l->PoolingMask = calloc(l->A->flatten_size, sizeof(uint8_t));
+
+    //tout plein de truc à allouer encore
+
+    return l;
+}
+
+
+void recap_conv(ConvLayer *l){
+    //Très insuffisant, il faut indiquer les activations, le pooling, le padding de convolution
+   
+    LOG_INFO_HEADER("Convolutional layer recap");
+    
+
+    LOG_INFO("%-12s : %zu x %zu x %zu\t(row x col x nchannels)", "Input",
+         l->input_shape.col, l->input_shape.row, l->input_shape.nmap);
+    
+    LOG_INFO("%-12s : %zu x %zu x %zu\t(row x col x nfilters)", "Kernel",
+         l->K->col, l->K->row, l->K->nfilter);
+     
+    LOG_INFO("%-12s : %s", "Padding", padding_to_string(l->padding));
+   
+    LOG_INFO("%-12s : ReLU", "Activation");
+
+    LOG_INFO("%-12s : MaxPool 2 x 2\tstride 2\n", "Pooling");
+
+    LOG_INFO("%-12s : %zu x %zu x %zu\t(row x col x nfilters)", "Output",
+         l->P->col, l->P->row, l->P->nfilter);
+    
+    LOG_INFO("%-12s : %zu", "Num parameters", l->K->flatten_size+l->K->nfilter);
+
+
+    //LOG_COLOR("")
+    //LOG_INFO("Kernel dimension : %zu x %zu \nNumber of input feature maps : %zu \nNumber of filters : %zu", l->K->col, l->K->row, l->K->nmap, l->K->nfilter);
+
+}
+
+void clean_conv(ConvLayer *l){
     assert(l != NULL && "Error null pointer in clean_conv_layer");
     
+    //Ca devrait pas être une logique de free, plus une
+
     //Back prop cache outputs
+    
     free_tensor4(&l->A);
-    free(l->Pooling_Mask);
+    free(l->PoolingMask);
 
     //->Back prop cache gradients
     free_tensor4(&l->dK);
     free(l->dB);
     
+    //->Kflip
+    free_tensor4(&l->Kflip);
+
     //-> Output
     free_tensor4(&l->P);
     free_tensor4(&l->dX);
 
 }
 
-void forward_conv(ConvLayer *l, const tensor4_t *X){
+tensor4_t* forward_conv(ConvLayer *l, const tensor4_t *X){
     
     REQUIRE(l != NULL,"Layer cannot be NULL");
     REQUIRE(X != NULL,"Input X cannot be NULL");
     REQUIRE(l->K->nmap == X->nmap, "Feature map number must match between Input X and kernel K"); 
 
-    //A terme possibilité de réallouer les Kernels ?? (Franchement mauvaise idée) (on enlève définitivement)
     
     //Sets the input pointer, not owned
     l->X = X;
 
     //RESETS THE TENSOR : LIKE CLEAN IT, hold up, setbias does the job !! false alert
-
-    //Allocates the output tensor               (Va être déplacé dans le cstr)
-    allocZ(l->X,l->K,&l->A,l->padding);
-    
     setBias(l->A,l->b);
     //print_tensor4_data(l->A);
     
@@ -84,12 +179,10 @@ void forward_conv(ConvLayer *l, const tensor4_t *X){
     //print_tensor4_data(l->A);
 
     ReLU(l->A);
-    //print_tensor4_data(l->A);
-
-    //Allocates the output pooled tensor               (Va être déplacé dans le cstr)
-    allocP(l->A, &l->P, &l->Pooling_Mask);
-    MaxPool(l->A, l->P, l->Pooling_Mask);
     
+    MaxPool(l->A, l->P, l->PoolingMask);
+    
+    return l->P;
 }
 
 void backward_conv(ConvLayer *l, const tensor4_t *dP){

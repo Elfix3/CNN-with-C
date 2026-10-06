@@ -20,6 +20,7 @@
 #define GREEN   "\033[32m"
 #define GRAY    "\033[90m"
 
+#define HEADER_BAR "###########################"
 
 //Message générique de log (pas utilisé hors développement)
 #define LOG(msg)                        printf("\n##### [%s] %s #####\n", __func__, msg)
@@ -38,10 +39,14 @@
 
 //---> INFO
 #if INFO
-    #define LOG_INFO(fmt, ...) fprintf(stdout, CYAN "[INFO] (in %s) : " fmt RESET "\n", \
-                __func__, ##__VA_ARGS__)
+    #define LOG_INFO(fmt, ...) fprintf(stdout, CYAN  fmt RESET "\n", \
+                ##__VA_ARGS__)
+    #define LOG_INFO_HEADER(fmt, ...) \
+        fprintf(stdout, CYAN "\n" HEADER_BAR "\n" fmt "\n" HEADER_BAR RESET "\n\n", \
+                ##__VA_ARGS__)
 #else
     #define LOG_INFO(fmt, ...)
+    #define LOG_INFO_HEADER(fmt, ...)
 #endif
 
 
@@ -60,8 +65,11 @@
 //---> ERROR
 #if ERROR
     #define LOG_ERROR(fmt, ...) \
+        do { \
         fprintf(stderr, RED "[ERROR] %s:%d (%s): " fmt RESET "\n", \
-                __FILE__, __LINE__, __func__, ##__VA_ARGS__)
+                __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
+        abort(); \
+        } while (0)
 #else
      #define LOG_ERROR(fmt, ...)
 #endif

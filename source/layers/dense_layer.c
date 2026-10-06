@@ -1,5 +1,10 @@
 #include "layers/dense_layer.h"
 
+//reshape method
+static void t4reshape(tensor4_t *T){
+    return;
+};
+
 
 DenseLayer *init_dense(size_t n, size_t m, activation_t type){
     DenseLayer *l = malloc(sizeof(DenseLayer));
