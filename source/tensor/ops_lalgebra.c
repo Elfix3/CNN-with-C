@@ -1,6 +1,6 @@
 #include "tensor/ops_laglebra.h"
 
-void allocMatMult(const tensor2_t *X, const tensor2_t *W, tensor2_t **Z){
+void allocMatMult(const tensor4_t *X, const tensor4_t *W, tensor4_t **Z){
     // HORRIBLE MAIS ON DEVELOPPE LES ALGOS DABORD
     REQUIRE(X != NULL, "Null X tensor");
     REQUIRE(W != NULL, "Null W tensor");
@@ -10,13 +10,13 @@ void allocMatMult(const tensor2_t *X, const tensor2_t *W, tensor2_t **Z){
     checkT2(W);
 
     if(*(Z) == NULL){
-        (*Z) = (tensor2_t*)init_tensor4(X->col, W->row,1,1,NOFILL);
+        (*Z) = (tensor4_t*)init_tensor4(X->col, W->row,1,1,NOFILL);
     }
     //printf("%zu %zu\n",(*Z)->col, (*Z)->row);
     checkT2(*Z);
 }
 
-void matmult(const tensor2_t *X, const tensor2_t *W, tensor2_t *Z){
+void matmult(const tensor4_t *X, const tensor4_t *W, tensor4_t *Z){
     REQUIRE(X->row == W->col, "Dimensions of matmult X W dont match");
     REQUIRE(X->col == Z->col && W->row == Z->row, "Error output Z has wrong dimensions"); //Ca se duplique c'est moche 
     

@@ -19,8 +19,9 @@
 #define CYAN    "\033[36m"
 #define GREEN   "\033[32m"
 #define GRAY    "\033[90m"
+#define PURPLE  "\033[35m"
 
-#define HEADER_BAR "###########################"
+#define HEADER_BAR "#########################################################"
 
 //Message générique de log (pas utilisé hors développement)
 #define LOG(msg)                        printf("\n##### [%s] %s #####\n", __func__, msg)

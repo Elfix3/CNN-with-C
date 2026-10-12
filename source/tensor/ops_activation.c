@@ -11,7 +11,8 @@ void ReLU(tensor4_t *T){
     }
 }
 
-void SoftMax(float *tab, size_t size){
+
+void SoftMaxOld(float *tab, size_t size){
 
     float max = tab[0];    
     for(size_t i = 1; i<size; i++){
@@ -29,4 +30,32 @@ void SoftMax(float *tab, size_t size){
     for(size_t i = 0; i<size; i++){
         tab[i] /= sumExp;
     }
+}
+
+
+void SoftMax(tensor4_t *T){
+    REQUIRE(T->row == 1 && T->nmap == 1,"Flatten tensor needed");
+
+    //pour chaque batch
+    for(size_t b = 0; b<T->nbatch; b++){
+        float max = get_t4_val(T,0,0,0,b);
+        
+        for(size_t c = 1; c<T->col; c++){
+            if(T->datas[get_t4_idx(T,c,0,0,b)] > max){
+                max = T->datas[get_t4_idx(T,c,0,0,b)];
+            }
+        }
+
+        float sumExp = 0.0f;
+        for(size_t c = 0; c<T->col; c++){
+            T->datas[get_t4_idx(T,c,0,0,b)] = expf(T->datas[get_t4_idx(T,c,0,0,b)] - max);
+            sumExp += T->datas[get_t4_idx(T,c,0,0,b)];
+        }
+
+        for(size_t c = 0; c<T->col; c++){
+            T->datas[get_t4_idx(T,c,0,0,b)] /= sumExp;
+        }
+    }
+        //softmaxer la ligne
+
 }

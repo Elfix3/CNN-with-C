@@ -252,9 +252,7 @@ void MaxPool(const tensor4_t *A, tensor4_t *P, uint8_t *Pooling_Mask){
                         max_val = max4(A->datas[a], A->datas[b], A->datas[c], A->datas[d]);
                         max_index = maxindex4(A->datas[a], A->datas[b], A->datas[c], A->datas[d], a, b, c, d);
                     }
-                    //Pooling_Mask[max_index] = (uint8_t)1;
-                    
-                    
+                    Pooling_Mask[max_index] = (uint8_t)1;
                     //printf("\nBatch : %zu Fmap : %zu Row : %zu Col : %zu",idx_batch, idx_im, idx_row, idx_col);
                     size_t store_index = PStrideBatch + PStrideFilter + pRow*P->strides[1] + pCol;
                     //printf("\nstore index : %zu\n",store_index);

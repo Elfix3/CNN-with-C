@@ -54,12 +54,6 @@ typedef struct{
     float *datas;
 } tensor4_t;
 
-//----------------------------------//             
-//---           TENSOR 2         ---//
-//----------------------------------//
-typedef struct {
-    tensor4_t; // membre sans nom
-} tensor2_t;
 
 
 //----------------------------------//            
@@ -75,7 +69,6 @@ void free_tensor4(tensor4_t **t);
 //----------------------------------//            
 //---           Access           ---//
 //----------------------------------//
-
 //Access to a given index 
 static inline size_t get_t4_idx(const tensor4_t *t,size_t idx0, size_t idx1, size_t idx2, size_t idx3){
 return idx0*t->strides[0] + idx1*t->strides[1] + idx2*t->strides[2] + idx3*t->strides[3];} 
@@ -95,6 +88,7 @@ tensor4_dim_t get_t4_dim(const tensor4_t *T);
 //Print tensordim
 void print_t4_dim(const tensor4_dim_t *tdim);
 
+void reshape(tensor4_t *T, const tensor4_dim_t tdim);
 
 //----------------------------------//            
 //---           Display          ---//
@@ -111,7 +105,7 @@ uint8_t compareTensor4(const tensor4_t *T1, const tensor4_t *T2);
 void reset_t4(tensor4_t *T);
 
 //well ok
-void checkT2(const tensor2_t *T);
+void checkT2(const tensor4_t *T);
 
 
 

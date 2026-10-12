@@ -77,16 +77,16 @@ ConvLayer *init_conv_layerOld(size_t kernel_size, size_t n_fmap, size_t n_filter
     return l;
 }
 
-ConvLayer *init_conv_layer(init_conv_layer_parameter_t param){
+ConvLayer *init_conv_layer(tensor4_dim_t input_dim ,init_conv_layer_parameter_t param){
     ConvLayer *l = (ConvLayer*)malloc(sizeof(ConvLayer));
-    
-    l->input_shape = param.Input->dim;
+
+    l->input_shape = input_dim; // Laisser ?
     l->X = NULL;
     
     l->padding = param.padding_type;
 
     //Init K
-    l->K = init_tensor4(param.kernel_size, param.kernel_size, param.input_dimension.nmap, param.n_filter,UNIFORM);
+    l->K = init_tensor4(param.kernel_size, param.kernel_size, input_dim.nmap, param.n_filter,UNIFORM);
     
     //Init b
     l->b = calloc(param.n_filter,sizeof(float));  
@@ -96,20 +96,23 @@ ConvLayer *init_conv_layer(init_conv_layer_parameter_t param){
     }
 
     //faut check les ptr
-    l->A = allocA(param.input_dimension, l);
+    l->A = allocA(input_dim, l);
     l->P = allocP(l->A->dim);
 
     l->PoolingMask = calloc(l->A->flatten_size, sizeof(uint8_t));
 
     //tout plein de truc à allouer encore
-
+    
     return l;
 }
 
+void free_conv(ConvLayer *l){
+    //completely clears the layer
+}
 
-void recap_conv(ConvLayer *l){
+void recap_conv(const ConvLayer *l){
     //Très insuffisant, il faut indiquer les activations, le pooling, le padding de convolution
-   
+    
     LOG_INFO_HEADER("Convolutional layer recap");
     
 
@@ -133,7 +136,10 @@ void recap_conv(ConvLayer *l){
 
     //LOG_COLOR("")
     //LOG_INFO("Kernel dimension : %zu x %zu \nNumber of input feature maps : %zu \nNumber of filters : %zu", l->K->col, l->K->row, l->K->nmap, l->K->nfilter);
+}
 
+tensor4_dim_t output_dim_conv(const ConvLayer *l){
+    return get_t4_dim(l->P);
 }
 
 void clean_conv(ConvLayer *l){
@@ -159,12 +165,13 @@ void clean_conv(ConvLayer *l){
 
 }
 
-tensor4_t* forward_conv(ConvLayer *l, const tensor4_t *X){
+const tensor4_t* forward_conv(ConvLayer *l, const tensor4_t *X){
     
     REQUIRE(l != NULL,"Layer cannot be NULL");
     REQUIRE(X != NULL,"Input X cannot be NULL");
     REQUIRE(l->K->nmap == X->nmap, "Feature map number must match between Input X and kernel K"); 
 
+    //assert(0);
     
     //Sets the input pointer, not owned
     l->X = X;
@@ -180,12 +187,19 @@ tensor4_t* forward_conv(ConvLayer *l, const tensor4_t *X){
 
     ReLU(l->A);
     
+    //calloc le masque
+    l->PoolingMask = calloc(l->A->flatten_size, sizeof(uint8_t));
     MaxPool(l->A, l->P, l->PoolingMask);
     
+    //print_tensor4_mask(l->PoolingMask, l->A);
     return l->P;
 }
 
-void backward_conv(ConvLayer *l, const tensor4_t *dP){
+const tensor4_t* backward_conv(ConvLayer *l, const tensor4_t *dP){
+    return NULL;
+}
+
+void update_conv(ConvLayer *l){
 }
 
 //Kinda useless

@@ -31,4 +31,4 @@ run: all
 clean:
 	rm -rf $(BUILD_DIR) $(TARGET)
 
-#-include $(OBJS:.o=.d)
+-include $(OBJS:.o=.d)

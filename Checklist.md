@@ -9,6 +9,7 @@
 - [ ] Create datasetshuffler
 - [ ] Make batch gradient descent
 - [ ] Add ADAM Optimiser
+- [ ] Add dropout
 
 
 # File architecture

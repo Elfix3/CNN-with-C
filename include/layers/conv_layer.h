@@ -15,7 +15,6 @@
 
 
 typedef struct{
-    tensor4_t *Input;
     size_t kernel_size;
     size_t n_filter;
     padding_t padding_type;
@@ -70,20 +69,31 @@ typedef struct{
 ConvLayer *init_conv_layerOld(size_t kernel_size ,size_t n_fmap, size_t n_filter, padding_t type);
 
 //il faut pouvoir initaliser une couche depuis la précédente
-ConvLayer *init_conv_layer(init_conv_layer_parameter_t param);
+ConvLayer *init_conv_layer(tensor4_dim_t input_dim, init_conv_layer_parameter_t param);
 
-void recap_conv(ConvLayer *l);
+// ---->   WRAPPED FUNCTIONS
 
-//Clears data except parameters
+//Unallocates all the layer
+void free_conv(ConvLayer *l);
+
+//Clears all the buffers, keeps parameters
 void clean_conv(ConvLayer *l);
 
-//X has : (x*y*N_features*N_Batch)
+//Prints all info on the layer
+void recap_conv(const ConvLayer *l);
 
-//Doit retourner ptr vers la sortie
-tensor4_t* forward_conv(ConvLayer *l, const tensor4_t *X);
+//Fetches output dimension of the layer
+tensor4_dim_t output_dim_conv(const ConvLayer *l);
 
-//Doit retourner ptr vers la sortie
-void backward_conv(ConvLayer *l, const tensor4_t *dP);
+//Forward process, returns P to the next layer
+const tensor4_t* forward_conv(ConvLayer *l, const tensor4_t *X);
 
+//Backward process, returns dX to the previous layer
+const tensor4_t* backward_conv(ConvLayer *l, const tensor4_t *dP);
+
+//updates the biases and the weights
+void update_conv(ConvLayer *l);
+
+// ---->   END WRAPPED
 
 #endif
