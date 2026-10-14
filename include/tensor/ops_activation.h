@@ -12,9 +12,6 @@ typedef enum{
 
 void ReLU(tensor4_t *T);
 
-//Retravailler la signature
-void SoftMaxOld(float *tab, size_t size);
-
 void SoftMax(tensor4_t *T);
 
 #endif

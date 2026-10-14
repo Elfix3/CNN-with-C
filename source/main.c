@@ -209,7 +209,7 @@ int main(int argc, char **argv){
     tensor4_t* A = init_tensor4(4,1,1,3,UNIFORM);
     print_tensor4_data(A);
 
-    SoftMax(A);
+    SoftMaxNew(A);
     print_tensor4_data(A);
 
 
